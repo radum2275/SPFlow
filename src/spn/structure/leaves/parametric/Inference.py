@@ -15,6 +15,22 @@ logger = logging.getLogger(__name__)
 
 POS_EPS = np.finfo(float).eps
 
+def multivariate_gaussian_likelihood(node, data=None, dtype=np.float64, scope=None):
+    probs = np.ones((data.shape[0], 1), dtype=dtype)
+    if scope is None:
+        data = data[:, node.scope]
+    else:
+        data = data
+    marg_ids = np.argwhere(np.isnan(data))[:, 0]
+    # marg_ind = np.where(np.isnan(data))
+    observations = np.delete(data, marg_ids, axis=0)
+    scipy_obj, params = get_scipy_obj_params(node)
+    probs = np.ma.array(probs, mask=False)
+    probs.mask[marg_ids] = True
+    probs[~probs.mask] = scipy_obj.pdf(observations, **params)
+    probs.mask = np.ma.nomask
+    return probs
+
 
 def continuous_likelihood(node, data=None, dtype=np.float64):
     probs, marg_ids, observations = leaf_marginalized_likelihood(node, data, dtype)
@@ -93,3 +109,4 @@ def add_parametric_inference_support():
     add_node_likelihood(Exponential, exponential_likelihood)
     add_node_likelihood(Uniform, uniform_likelihood)
     add_node_likelihood(CategoricalDictionary, categorical_dictionary_likelihood)
+    add_node_likelihood(Multivariate_Gaussian, multivariate_gaussian_likelihood)
