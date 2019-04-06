@@ -90,8 +90,13 @@ class Sum(Node):
 
 
 class Product(Node):
-    def __init__(self, children=None):
+    def __init__(self, children=None, mean= None, cov = None):
         Node.__init__(self)
+        self.mean = mean
+        self.cov = cov  
+        self.curr_mean = None
+        self.curr_cov = None
+
         if children is None:
             children = []
         self.children = children
