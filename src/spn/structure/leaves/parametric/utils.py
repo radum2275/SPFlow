@@ -33,6 +33,8 @@ def get_scipy_obj(param_type):
     elif param_type == Bernoulli:
         return bernoulli
 
+    elif param_type == Multivariate_Gaussian:
+        return multivariate_normal
     else:
         raise Exception("unknown node type %s " % str(param_type))
 
@@ -70,6 +72,11 @@ def get_scipy_obj_params(node):
     elif isinstance(node, Bernoulli):
         assert node.p is not None
         params = {"p": node.p}
+
+    elif isinstance(node, Multivariate_Gaussian):
+        assert node.mean is not None
+        assert node.cov is not None
+        params = {"mean": node.mean, "cov": node.cov}
 
     else:
         raise Exception("unknown node type %s " % type(node))
