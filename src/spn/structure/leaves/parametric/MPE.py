@@ -14,6 +14,7 @@ from spn.structure.leaves.parametric.Inference import (
     geometric_likelihood,
     exponential_likelihood,
     categorical_dictionary_likelihood,
+    multivariate_gaussian_likelihood
 )
 from spn.structure.leaves.parametric.Parametric import (
     Gaussian,
@@ -27,6 +28,7 @@ from spn.structure.leaves.parametric.Parametric import (
     CategoricalDictionary,
     NegativeBinomial,
     Hypergeometric,
+    Multivariate_Gaussian
 )
 import numpy as np
 import logging
@@ -38,9 +40,21 @@ def get_parametric_bottom_up_ll(ll_func, mode_func):
     def param_bu_fn(node, data=None, dtype=np.float64):
         probs = ll_func(node, data=data, dtype=dtype)
 
-        mpe_ids = np.isnan(data[:, node.scope[0]])
-        mode_data = np.ones((1, data.shape[1])) * mode_func(node)
-        probs[mpe_ids] = ll_func(node, data=mode_data, dtype=dtype)
+        if len(node.scope) > 1:
+            mpe_id_data = np.argwhere(np.isnan(data[:, node.scope]))
+            mpe_ids = mpe_id_data[:, 0]
+            mpe_col_ids = mpe_id_data[:, 1]
+            mode_data = data[np.ix_(mpe_ids, node.scope)]
+            ind = np.where(np.isnan(mode_data))
+            mode_data[ind] = mode_func(node)[ind[1]]
+
+            #mode_data = np.ones((1, data.shape[1])) * mode_func(node)
+            probs[mpe_ids] = ll_func(node, data=mode_data, dtype=dtype, scope = mode_data.shape[1])
+
+        else:
+            mpe_ids = np.isnan(data[:, node.scope[0]])
+            mode_data = np.ones((1, data.shape[1])) * mode_func(node)
+            probs[mpe_ids] = ll_func(node, data=mode_data, dtype=dtype)
 
         return probs
 
@@ -156,4 +170,12 @@ def add_parametric_mpe_support():
         CategoricalDictionary,
         get_parametric_bottom_up_ll(categorical_dictionary_likelihood, categoricaldict_mode),
         get_parametric_top_down_ll(categoricaldict_mode),
+    )
+
+    def mutltivariate_gaussian_mode(node):
+        return node.mean
+
+    add_node_mpe(
+        Multivariate_Gaussian, get_parametric_bottom_up_ll(multivariate_gaussian_likelihood,mutltivariate_gaussian_mode),
+        get_parametric_top_down_ll(mutltivariate_gaussian_mode)
     )
