@@ -135,3 +135,30 @@ def SPN_Reshape(node, max_children=2):
     v, err = is_valid(node)
     assert v, err
     return node
+
+
+def Prune_oSLRAU(nod):
+    v, err = is_valid(nod)
+    assert v, err
+    nodes = get_nodes_by_type(nod, (Product, Sum))
+
+
+    while len(nodes) > 0:
+        n = nodes.pop()
+        n_type = type(n)
+        is_sum = n_type == Sum
+
+        if is_sum:
+            weights = n.weights
+            for i, c in enumerate(n.children):
+                if c.count < 2:
+                    n.children.remove(c)
+                    weights.remove(n.weights[i])
+            for i, c in enumerate(n.children):
+                n.weights[i] = float(weights[i]) / sum(weights)
+
+    assign_ids(nod)
+    v, err = is_valid(nod)
+    assert v, err
+    nod = Prune(nod)
+    return nod
