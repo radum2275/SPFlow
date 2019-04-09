@@ -8,6 +8,7 @@ import collections
 from spn.algorithms.oSLRAUStat import update_mean_and_covariance, update_curr_mean_and_covariance
 
 from spn.structure.Base import get_topological_order_layers
+from spn.structure.leaves.parametric.Parametric import Parametric, Gaussian
 
 
 class oSLRAUParams:
@@ -25,7 +26,7 @@ class oSLRAUParams:
 
 	"""
 
-    def __init__(self, batchsize=128, mergebatch_threshold=128, corrthresh=0.1, mvmaxscope=1, equalweight = False, currVals = False):
+    def __init__(self, batchsize=128, mergebatch_threshold=128, corrthresh=0.1, mvmaxscope=1, equalweight = False, currVals = True):
 
         self.batchsize = batchsize
         self.mergebatch_threshold = mergebatch_threshold
@@ -138,7 +139,7 @@ _node_bottom_up_mpe.update({Sum: sum_likelihood, Product: prod_likelihood})
 
 
 
-def oSLRAU(node, input_data, node_top_down_mpe=_node_top_down_oSLRAU, node_bottom_up_mpe=_node_bottom_up_mpe,
+def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSLRAU, node_bottom_up_mpe=_node_bottom_up_mpe,
            in_place=False):
     valid, err = is_valid(node)
     assert valid, err
@@ -148,13 +149,15 @@ def oSLRAU(node, input_data, node_top_down_mpe=_node_top_down_oSLRAU, node_botto
     else:
         data = np.array(input_data)
 
+    assert oSLRAU_params, "please provide parameters for oSLRAU"
 
     #print('oSLRAU')
 
     # _node_top_down_oSLRAU[Product] = oSLRAU_prod
     # _node_top_down_oSLRAU[Sum] = oSLRAU_sum
 
-    oSLRAU_params = oSLRAUParams()
+    # oSLRAU_params = oSLRAUParams()
+    oSLRAU_params = oSLRAU_params
     nodes = get_nodes_by_type(node)
     tot_nodes_len = len(nodes)
 
@@ -250,16 +253,21 @@ def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=No
             func = n.__class__._eval_func[-1]
 
             param = all_results[n]
-
+            # print("Leaf", isinstance(n, Leaf))
+            # print("patametric", isinstance(n, Parametric))
+            # print("Gaussian", isinstance(n, Gaussian))
             if isinstance(n, Product):
                 result, update_node = func(n, param, oSLRAU_params, **args)
                 if update_node is not None:
                     nodes_to_update.append(update_node)
 
+
             elif isinstance(n, Leaf):
+                #print("inLeaf", isinstance(n, Leaf))
             # result = func(n, param, **args)
-                n.count = n.count + len(parent_result)
-                update_mean_and_covariance(n, parent_result, oSLRAU_params, **args)  # works only for gaussian nodes
+                instances = np.concatenate(param)
+                n.count = n.count + len(instances)
+                update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
 
             else:
                 result = func(n, param, **args)
