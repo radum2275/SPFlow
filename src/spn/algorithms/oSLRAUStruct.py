@@ -96,20 +96,21 @@ def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
     p2 = create_factored_dist(scope, tot_nodes_len, node, params)
 
     if params.equalweight:
-        p1.count = int(node.count/2)
-        p2.count = node.count - p1.count
+        p1.count = 1 #int(node.count/2)
+        p2.count = 1 #node.count - p1.count
     else:
         p1.count = node.count
-        p2.count = 0
+        p2.count = 1
 
     s = Sum(children=[p1, p2])
     s.count = node.count
 
     w1 = float((p1.count+1)/(s.count+2))
     w2 = float((p2.count+1)/(s.count+2))
+    tot = w1+w2
 
-    w1 = w1/(w1+w2)
-    w2 = w2/(w1+w2)
+    w1 = w1/tot
+    w2 = w2/tot
     s.weights = [w1, w2]
     s.scope = scope
 
@@ -173,7 +174,7 @@ def create_factored_dist(scope, tot_nodes_len, node, params):
     for i, s in enumerate(scope, 0):
         # print(s)
         if params.currVals:
-            assert stdev[i][i] is not np.nan, "nan stdev at %s" %(node)
+            assert stdev[i][i] or mean[i] is not np.nan, "nan stdev or mean at %s" %(node)
             c = Gaussian(mean = mean[i], stdev = stdev[i][i], scope = [s])
         else:
             c = Gaussian(mean=0, stdev=1, scope=[s])
