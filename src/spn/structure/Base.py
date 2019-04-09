@@ -15,7 +15,7 @@ class Node(object):
     def __init__(self):
         self.id = 0
         self.scope = []
-        self.count = 0
+        self.count = 1
 
     @property
     def name(self):
