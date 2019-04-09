@@ -11,6 +11,7 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
     m = x.shape[0]
     n = node.count
 
+    assert not np.isnan(x).any(), "data cointains NaN values"
     if isinstance(node, Product):
 
         if node.cov is None:
@@ -69,6 +70,10 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
         dm = new_mean - mean
         new_cov = (n * cov + dx.T.dot(dx)) / (n + m) - np.outer(dm, dm)
 
+        assert not np.isnan(new_mean).any(), "new mean is NaN at %s" % (node)
+        assert not np.isnan(new_cov).any(), "new covariance is NaN at %s" % (node)
+        # print("cov",new_cov)
+        # print("mean", new_mean)
         # update node values
         if type(node) == Gaussian:
             new_stdev = np.sqrt(np.abs(new_cov))
