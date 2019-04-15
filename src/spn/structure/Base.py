@@ -133,6 +133,10 @@ class Max(Node):
             children = []
         self.children = children
 
+class In_Latent(Leaf):
+    def __init__(self, inference_value = 1, scope=None):
+        Leaf.__init__(self, scope=scope)
+        self.inference_value = inference_value
 
 class Context:
     def __init__(self, meta_types=None, domains=None, parametric_types=None, scope=None, feature_names=None):
