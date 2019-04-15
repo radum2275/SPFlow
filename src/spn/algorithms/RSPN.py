@@ -1,0 +1,1 @@
+def initialise_rspn(initial_spn, no_of_latent_variables):
