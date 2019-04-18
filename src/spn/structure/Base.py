@@ -133,9 +133,23 @@ class Max(Node):
             children = []
         self.children = children
 
+
+class Out_Latent(Node):
+    def __init__(self, latent_winner=None, children=None):
+        Node.__init__(self)
+        if latent_winner is None:
+            latent_winner = []
+        self.latent_winner = latent_winner
+
+        if children is None:
+            children = []
+        self.children = children
+
+
 class In_Latent(Leaf):
-    def __init__(self, inference_value = 1, scope=None):
+    def __init__(self, bin_value = 0, inference_value = 1, scope=None):
         Leaf.__init__(self, scope=scope)
+        self.bin_value = bin_value
         self.inference_value = inference_value
 
 class Context:
