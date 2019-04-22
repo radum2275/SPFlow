@@ -31,6 +31,14 @@ def multivariate_gaussian_likelihood(node, data=None, dtype=np.float64, scope=No
     probs.mask = np.ma.nomask
     return probs
 
+def in_latent_likelihood(node, data=None, dtype=np.float64):
+    #probs, marg_ids, observations = leaf_marginalized_likelihood(node, data, dtype)
+    probs = np.ones((data.shape[0], 1), dtype=dtype)
+    if type(node.inference_value) == int:
+        probs.fill(node.inference_value)
+    else:
+        probs = node.inference_value
+    return probs
 
 def continuous_likelihood(node, data=None, dtype=np.float64):
     probs, marg_ids, observations = leaf_marginalized_likelihood(node, data, dtype)
@@ -110,3 +118,4 @@ def add_parametric_inference_support():
     add_node_likelihood(Uniform, uniform_likelihood)
     add_node_likelihood(CategoricalDictionary, categorical_dictionary_likelihood)
     add_node_likelihood(Multivariate_Gaussian, multivariate_gaussian_likelihood)
+    add_node_likelihood(In_Latent, in_latent_likelihood)
