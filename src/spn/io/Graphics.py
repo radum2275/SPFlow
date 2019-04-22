@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 def get_networkx_obj(spn, feature_labels=None):
     import networkx as nx
-    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, Out_Latent, In_Latent
+    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, Out_Latent
+    from spn.structure.leaves.parametric.Parametric import In_Latent
+
     import numpy as np
 
     all_nodes = get_nodes_by_type(spn)
@@ -35,12 +37,12 @@ def get_networkx_obj(spn, feature_labels=None):
         elif isinstance(n, Out_Latent):
             label = "OL"
         elif isinstance(n, In_Latent):
-            label = "InL"
+            label = "InL" + str(n.scope[0])
         else:
             if feature_labels is not None:
                 label = feature_labels[n.scope[0]]
             else:
-                label = "V"  + str(n.scope[0]) 
+                label = "V" + str(n.scope[0])
         g.add_node(n.id)
         labels[n.id] = label
 
