@@ -22,6 +22,12 @@ class Parametric(Leaf):
     def type(self):
         return self._type
 
+class In_Latent(Leaf):
+    def __init__(self, bin_value=0, inference_value=1, scope=None):
+        Leaf.__init__(self, scope=scope)
+        self.bin_value = bin_value
+        self.inference_value = inference_value
+
 
 class Gaussian(Parametric):
     """
