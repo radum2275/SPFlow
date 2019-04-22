@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from scipy.special import logsumexp
 
-from spn.structure.Base import Product, Sum, eval_spn_bottom_up, Max
+from spn.structure.Base import Product, Sum, eval_spn_bottom_up, Max, Out_Latent
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,18 @@ def prod_log_likelihood(node, children, data=None, dtype=np.float64):
 
     return pll
 
+def out_latent_log_likelihood(node, children, data=None, dtype=np.float64):
+    llchildren = np.concatenate(children, axis=1)
+    assert llchildren.dtype == dtype
+    #print("node and llchildren", (node, llchildren))
+    mll = np.max(llchildren, axis=1).reshape(-1, 1)
+    return mll
 
 def prod_likelihood(node, children, data=None, dtype=np.float64):
     llchildren = np.concatenate(children, axis=1)
     assert llchildren.dtype == dtype
     return np.prod(llchildren, axis=1).reshape(-1, 1)
 
-#added
 def max_log_likelihood(node, children, data=None, dtype=np.float64):
     llchildren = np.concatenate(children, axis=1)
     assert llchildren.dtype == dtype
@@ -47,7 +52,6 @@ def max_log_likelihood(node, children, data=None, dtype=np.float64):
     mll = np.max(llchildren, axis=1).reshape(-1, 1)
     return mll
 
-#added
 def max_likelihood(node, children, data=None, dtype=np.float64):
     llchildren = np.concatenate(children, axis=1)
     assert llchildren.dtype == dtype
@@ -80,8 +84,7 @@ def sum_likelihood(node, children, data=None, dtype=np.float64):
 
 
 
-#added max
-_node_log_likelihood = {Sum: sum_log_likelihood, Product: prod_log_likelihood, Max: max_log_likelihood}
+_node_log_likelihood = {Sum: sum_log_likelihood, Product: prod_log_likelihood, Max: max_log_likelihood, Out_Latent: out_latent_log_likelihood}
 _node_likelihood = {Sum: sum_likelihood, Product: prod_likelihood, Max: max_likelihood}
 
 
