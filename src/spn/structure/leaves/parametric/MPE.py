@@ -14,7 +14,8 @@ from spn.structure.leaves.parametric.Inference import (
     geometric_likelihood,
     exponential_likelihood,
     categorical_dictionary_likelihood,
-    multivariate_gaussian_likelihood
+    multivariate_gaussian_likelihood,
+    in_latent_likelihood
 )
 from spn.structure.leaves.parametric.Parametric import (
     Gaussian,
@@ -28,7 +29,8 @@ from spn.structure.leaves.parametric.Parametric import (
     CategoricalDictionary,
     NegativeBinomial,
     Hypergeometric,
-    Multivariate_Gaussian
+    Multivariate_Gaussian,
+    In_Latent
 )
 import numpy as np
 import logging
@@ -178,4 +180,12 @@ def add_parametric_mpe_support():
     add_node_mpe(
         Multivariate_Gaussian, get_parametric_bottom_up_ll(multivariate_gaussian_likelihood,mutltivariate_gaussian_mode),
         get_parametric_top_down_ll(mutltivariate_gaussian_mode)
+    )
+    def in_latent_mode(node):
+        node.bin_value = 1
+        return node.bin_value
+
+    add_node_mpe(
+        In_Latent, get_parametric_bottom_up_ll(in_latent_likelihood,in_latent_mode),
+        get_parametric_top_down_ll(in_latent_mode)
     )
