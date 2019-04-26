@@ -135,11 +135,9 @@ class Max(Node):
 
 
 class Out_Latent(Node):
-    def __init__(self, latent_winner=None, children=None):
+    def __init__(self, out_latent_winner=None, children=None):
         Node.__init__(self)
-        if latent_winner is None:
-            latent_winner = []
-        self.latent_winner = latent_winner
+        self.out_latent_winner = out_latent_winner
 
         if children is None:
             children = []
