@@ -2,13 +2,13 @@ from spn.algorithms.oSLRAUStruct import update_structure
 from spn.algorithms.Inference import log_likelihood, sum_likelihood, prod_likelihood
 from spn.algorithms.MPE import get_node_funtions
 from spn.algorithms.Validity import is_valid
-from spn.structure.Base import Product, Sum, get_nodes_by_type, Max, Leaf, assign_ids
+from spn.structure.Base import Product, Sum, get_nodes_by_type, Max, Leaf, assign_ids, Out_Latent
 import numpy as np
 import collections
 from spn.algorithms.oSLRAUStat import update_mean_and_covariance, update_curr_mean_and_covariance
 
 from spn.structure.Base import get_topological_order_layers
-from spn.structure.leaves.parametric.Parametric import Parametric, Gaussian
+from spn.structure.leaves.parametric.Parametric import Parametric, Gaussian, In_Latent
 
 
 class oSLRAUParams:
@@ -105,29 +105,6 @@ def oSLRAU_sum(node, parent_result, data=None, lls_per_node=None):
     return children_row_ids
 
 
-    # if len(parent_result) == 0:
-    #     return None
-    #
-    #
-    # # print(node, node.count)
-    #
-    # w_children_log_probs = np.zeros((len(parent_result), len(node.weights)))
-    # for i, c in enumerate(node.children):
-    #     w_children_log_probs[:, i] = lls_per_node[parent_result, c.id] + np.log(node.weights[i])
-    #
-    # max_child_branches = np.argmax(w_children_log_probs, axis=1)
-    #
-    # children_row_ids = []
-    #
-    # for i, c in enumerate(node.children):
-    #     children_row_ids.append(parent_result[max_child_branches == i])
-    #
-    #
-    #
-    #
-    #
-    # # print(children_row_ids)
-    # return children_row_ids
 
 
 
@@ -149,7 +126,7 @@ def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSL
     else:
         data = np.array(input_data)
 
-    assert oSLRAU_params, "please provide parameters for oSLRAU"
+    assert oSLRAU_params, "missing parameters for oSLRAU"
 
     #print('oSLRAU')
 
@@ -169,7 +146,7 @@ def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSL
     instance_ids = np.arange(data.shape[0])
 
     # one pass top down to decide on the max branch until it reaches a leaf, then it fills the nan slot with the mode
-    all_results, nodes_to_update = oSLRAU_eval_spn_top_down(node, node_top_down_mpe, oSLRAU_params, parent_result=instance_ids,
+    all_results, nodes_to_update = oSLRAU_eval_spn_top_down(node, oSLRAU_params, node_top_down_mpe, parent_result=instance_ids,
                                                             data=data, lls_per_node=lls_per_node)
 
     spn = oSLRAU_update_structure(node, oSLRAU_params, tot_nodes_len, nodes_to_update)
@@ -187,7 +164,7 @@ def oSLRAU_update_structure(root,  oSLRAU_params, tot_nodes_len, nodes_to_update
     return root
 
 
-def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=None, parent_result=None, **args):
+def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_down_oSLRAU, all_results=None, parent_result=None, **args):
     """
     evaluates an spn top to down
 
@@ -199,40 +176,6 @@ def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=No
     :param args: free parameters that will be fed to the lambda functions.
     :return: the result of computing and propagating all the values throught the network
     """
-    # if all_results is None:
-    #     all_results = {}
-    # else:
-    #     all_results.clear()
-    #
-    # nodes_to_update = []
-    #
-    # queue = collections.deque([(root, parent_result)])
-    #
-    # while queue:
-    #     node, parent_result = queue.popleft()
-    #
-    #     if isinstance(node, Product):
-    #         result, update_node = eval_functions[type(node)](node, parent_result, params, **args)
-    #         if update_node is not None:
-    #             nodes_to_update.append(update_node)
-    #
-    #     elif isinstance(node, Leaf):
-    #         #result = eval_functions[type(node)](node, parent_result, **args)
-    #         node.count = node.count + len(parent_result)
-    #         update_mean_and_covariance(node, parent_result, params, **args)  # works only for gaussian nodes
-    #
-    #     else:
-    #         result = eval_functions[type(node)](node, parent_result, **args)
-    #
-    #     all_results[node] = result
-    #
-    #     if result is not None and not isinstance(node, Leaf):
-    #
-    #         assert len(result) == len(node.children), "invalid function result for node %s" % (node.id)
-    #         for i, node in enumerate(node.children):
-    #             queue.append((node, result[i]))
-    #
-    # return all_results[root], nodes_to_update
 
     if all_results is None:
         all_results = {}
@@ -247,6 +190,7 @@ def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=No
 
     all_results[root] = [parent_result]
     nodes_to_update = []
+    in_latent_dict = {}
 
     for layer in reversed(get_topological_order_layers(root)):
         for n in layer:
@@ -266,9 +210,11 @@ def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=No
                 #print("inLeaf", isinstance(n, Leaf))
             # result = func(n, param, **args)
                 instances = np.concatenate(param)
-                n.count = n.count + len(instances)
-                update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
-
+                if len(instances) > 0:
+                    n.count = n.count + len(instances)
+                    in_latent_node = update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
+                    if type(in_latent_node) == In_Latent:
+                        in_latent_dict[in_latent_node] = instances
             else:
                 result = func(n, param, **args)
 
@@ -286,5 +232,5 @@ def oSLRAU_eval_spn_top_down(root, eval_functions, oSLRAU_params, all_results=No
         if len(node_type._eval_func) == 0:
             delattr(node_type, "_eval_func")
 
-    return all_results, nodes_to_update
+    return all_results, nodes_to_update, in_latent_dict
 
