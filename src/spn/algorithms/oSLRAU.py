@@ -105,13 +105,24 @@ def oSLRAU_sum(node, parent_result, data=None, lls_per_node=None):
     return children_row_ids
 
 
+def out_latent(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+    if len(parent_result) == 0:
+        return None
 
+    parent_result = merge_input_vals(parent_result)
+    children_row_ids = {}
+    out_latent_winner = node.out_latent_winner
+
+    for i, c in enumerate(node.children):
+        children_row_ids[c] = parent_result[out_latent_winner == i]
+
+    return children_row_ids
 
 
 node_functions = get_node_funtions()
 _node_top_down_oSLRAU = node_functions[0].copy()
 _node_bottom_up_mpe = node_functions[1].copy()
-_node_top_down_oSLRAU.update({Sum: oSLRAU_sum, Product: oSLRAU_prod})
+_node_top_down_oSLRAU.update({Sum: oSLRAU_sum, Product: oSLRAU_prod, Out_Latent: out_latent})
 _node_bottom_up_mpe.update({Sum: sum_likelihood, Product: prod_likelihood})
 
 
