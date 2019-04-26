@@ -1,12 +1,17 @@
 import numpy as np
 from spn.structure.Base import Product, Leaf
-from spn.structure.leaves.parametric.Parametric import Gaussian, Multivariate_Gaussian
+from spn.structure.leaves.parametric.Parametric import Gaussian, Multivariate_Gaussian, In_Latent
 
 
 def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= None):
 
 
-    scope = node.scope
+    scope = node.scope.copy()
+    l = data.shape[1]
+    for scpe in node.scope:
+        if scpe >= l:
+            scope.remove(scpe)
+
     x = data[np.ix_(parent_result, scope)]
     m = x.shape[0]
     n = node.count
@@ -16,9 +21,9 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
 
         if node.cov is None:
             # print(node.scope)
-            node.cov = np.identity(len(node.scope))
+            node.cov = np.identity(len(scope))
         if node.mean is None:
-            node.mean = np.zeros(len(node.scope))
+            node.mean = np.zeros(len(scope))
 
         mean = node.mean
         cov = node.cov
@@ -37,12 +42,12 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
         node.mean = new_mean
         node.cov = new_cov
 
-    #for gaussian leaves
+    # for gaussian leaves
     if isinstance(node, Leaf):
 
         if type(node) == Gaussian:
             if node.stdev is None:
-                #print("in leaf update", node.scope)
+                # print("in leaf update", node.scope)
                 node.stdev = 1
             if node.mean is None:
                 node.mean = 0
@@ -53,15 +58,17 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
 
         elif type(node) == Multivariate_Gaussian:
             if node.cov is None:
-                #print("in leaf update", node.scope)
-                node.cov = np.identity(len(node.scope))
+                # print("in leaf update", node.scope)
+                node.cov = np.identity(len(scope))
             if node.mean is None:
-                node.mean = np.zeros(len(node.scope))
+                node.mean = np.zeros(len(scope))
 
             mean = node.mean
             cov = node.cov
 
-        #print("in leaf update", node)
+        elif type(node) == In_Latent:
+            return node
+        # print("in leaf update", node)
         curr_sample_sum = x.sum(axis=0)
         new_mean = ((n) * (mean) + curr_sample_sum) / (n + m)
 
@@ -100,8 +107,12 @@ def iterate_corrs(node, corrthresh):
 
 def update_curr_mean_and_covariance(node, parent_result, params, data, lls_per_node= None):
 
+    scope = node.scope.copy()
+    l = data.shape[1]
+    for scpe in node.scope:
+        if scpe >= l:
+            scope.remove(scpe)
 
-    scope = node.scope
     x = data[np.ix_(parent_result, scope)]
     m = x.shape[0]
     n = node.count
@@ -110,15 +121,15 @@ def update_curr_mean_and_covariance(node, parent_result, params, data, lls_per_n
 
         if node.cov is None:
             # print(node.scope)
-            node.curr_cov = np.identity(len(node.scope))
+            node.curr_cov = np.identity(len(scope))
         if node.mean is None:
-            node.curr_mean = np.zeros(len(node.scope))
+            node.curr_mean = np.zeros(len(scope))
 
         # update mean
         mean = np.mean(x, axis=0)
         if m == 1:
             # x1 = np.repeat(x, 2, axis =0)
-            cov = np.identity(len(node.scope))
+            cov = np.identity(len(scope))
         else:
             cov = np.cov(x, rowvar=False)
 
