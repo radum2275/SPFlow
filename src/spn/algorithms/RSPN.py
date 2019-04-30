@@ -29,8 +29,9 @@ class RSPN():
             latent_val_node_list.append(spn_i)
 
         in_latent_children = []
+        scope = [self.num_variables + i for i in range(self.num_latent_variables)]
         for i in range(self.num_latent_variables):
-            in_latent_i = In_Latent(bin_value=0, scope=self.num_variables + i)
+            in_latent_i = In_Latent(bin_value=0, scope=scope)
             in_latent_children.append(in_latent_i)
 
         interface_node_list = []
@@ -71,8 +72,10 @@ class RSPN():
         weights = np.random.random_sample(self.num_latent_variables)
         weights = list(weights / np.sum(weights))
 
+        scope = [self.num_variables + i for i in range(self.num_latent_variables)]
+
         for i in range(self.num_latent_variables):
-            in_latent_i = In_Latent(bin_value=0, scope=self.num_variables + i)
+            in_latent_i = In_Latent(bin_value=0, scope=scope)
             in_latent_children.append(in_latent_i)
 
         self.top_spn = Sum(weights=weights, children=in_latent_children)
@@ -106,10 +109,11 @@ class RSPN():
                                                                                 parent_result=instance_ids,
                                                                                 data=dummy_data,
                                                                                 lls_per_node=lls_per_node)
-
+        i = 0
         for in_latent_node, instances in in_latent_dict.items():
-            interface_node_index = in_latent_node.scope[0] - self.num_variables
+            interface_node_index = in_latent_node.scope[i] - self.num_variables
             self.template_spn.out_latent_winner[instances] = interface_node_index
+            i = i+1
 
         return
 
@@ -158,10 +162,11 @@ class RSPN():
                                                                                     parent_result=instance_ids,
                                                                                     data=data,
                                                                                     lls_per_node=lls_per_node)
-
+            i = 0
             for in_latent_node, instances in in_latent_dict.items():
-                interface_node_index = in_latent_node.scope[0] - self.num_variables
+                interface_node_index = in_latent_node.scope[i] - self.num_variables
                 self.template_spn.out_latent_winner[instances] = interface_node_index
+                i = i+1
 
             return nodes_to_update
 
