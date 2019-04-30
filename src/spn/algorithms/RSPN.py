@@ -28,11 +28,11 @@ class RSPN():
             spn_i = copy.deepcopy(initial_spn)
             latent_val_node_list.append(spn_i)
 
-        in_latent_children = []
+        # in_latent_children = []
         scope = [self.num_variables + i for i in range(self.num_latent_variables)]
-        for i in range(self.num_latent_variables):
-            in_latent_i = In_Latent(bin_value=0, scope=scope)
-            in_latent_children.append(in_latent_i)
+        # for i in range(self.num_latent_variables):
+        #     in_latent_i = In_Latent(bin_value=0, scope=scope)
+        #     in_latent_children.append(in_latent_i)
 
         interface_node_list = []
         for i in range(self.num_latent_variables):
@@ -41,6 +41,10 @@ class RSPN():
             for j, spn in enumerate(latent_val_node_list):
                 weights = np.random.random_sample(self.num_latent_variables)
                 weights = list(weights / np.sum(weights))
+                in_latent_children = []
+                for i in range(self.num_latent_variables):
+                    in_latent_i = In_Latent(bin_value=0, scope=scope)
+                    in_latent_children.append(in_latent_i)
                 s_j = Sum(weights=weights, children=in_latent_children)
                 s_j.count = 1
 
@@ -49,7 +53,7 @@ class RSPN():
                     spn1.children.extend([s_j])
 
                 elif isinstance(spn, Sum):
-                    spn1 = copy.copy(spn)
+                    spn1 = copy.deepcopy(spn)
                     spn1 = Product(children=[spn1, s_j])
 
                 latent_val_node_list_copy.append(spn1)
