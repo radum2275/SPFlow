@@ -223,9 +223,11 @@ def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_dow
                 instances = np.concatenate(param)
                 if len(instances) > 0:
                     n.count = n.count + len(instances)
-                    in_latent_node = update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
-                    if type(in_latent_node) == In_Latent:
-                        in_latent_dict[in_latent_node] = instances
+                    if type(n) == In_Latent:
+                        in_latent_dict[n] = instances
+                    else:
+                        update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
+
             else:
                 result = func(n, param, **args)
 

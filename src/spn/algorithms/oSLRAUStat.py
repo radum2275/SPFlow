@@ -66,8 +66,8 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
             mean = node.mean
             cov = node.cov
 
-        elif type(node) == In_Latent:
-            return node
+        # elif type(node) == In_Latent:
+        #     return node
         # print("in leaf update", node)
         curr_sample_sum = x.sum(axis=0)
         new_mean = ((n) * (mean) + curr_sample_sum) / (n + m)
