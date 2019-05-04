@@ -152,6 +152,17 @@ class RSPN():
     def evaluate_rspn(self, data, oSLRAU_params):
 
         assert data.shape[1] == self.num_variables*self.len_sequence, "data columns not equal to number of variables time length of sequence"
+        nodes = get_nodes_by_type(self.template_spn)
+        # lls_per_node = np.zeros((data.shape[0], len(nodes)))
+
+        in_latent_index = []
+        for j in range(len(nodes)):
+            if isinstance(nodes[j], In_Latent):
+                in_latent_index.append(j)
+
+        for index in in_latent_index:
+            k = nodes[index].interface_index
+            nodes[index].inference_value = 1
 
         unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data)
 
@@ -219,6 +230,17 @@ class RSPN():
     def rspn_log_likelihood(self, data):
 
         assert data.shape[1] == self.num_variables*self.len_sequence, "data columns not equal to number of variables time length of sequence"
+        nodes = get_nodes_by_type(self.template_spn)
+        # lls_per_node = np.zeros((data.shape[0], len(nodes)))
+
+        in_latent_index = []
+        for j in range(len(nodes)):
+            if isinstance(nodes[j], In_Latent):
+                in_latent_index.append(j)
+
+        for index in in_latent_index:
+            k = nodes[index].interface_index
+            nodes[index].inference_value = 1
 
         unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data)
 
