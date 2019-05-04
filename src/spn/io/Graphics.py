@@ -37,7 +37,7 @@ def get_networkx_obj(spn, feature_labels=None):
         elif isinstance(n, Out_Latent):
             label = "OL"
         elif isinstance(n, In_Latent):
-            label = "InL" + str(n.scope[0])
+            label = "InL" + str(n.interface_index)
         else:
             if feature_labels is not None:
                 label = feature_labels[n.scope[0]]
