@@ -9,6 +9,8 @@ from scipy.special import logsumexp
 
 from spn.structure.Base import Product, Sum, eval_spn_bottom_up, Max, Out_Latent
 
+from spn.structure.leaves.parametric.Parametric import In_Latent
+
 logger = logging.getLogger(__name__)
 
 EPSILON = np.finfo(float).eps
@@ -92,7 +94,10 @@ _node_likelihood = {Sum: sum_likelihood, Product: prod_likelihood, Max: max_like
 def log_node_likelihood(node, *args, **kwargs):
     probs = _node_likelihood[type(node)](node, *args, **kwargs)
     with np.errstate(divide="ignore"):
-        nll = np.log(probs)
+        if type(node) == In_Latent:
+            nll = probs
+        else:
+            nll = np.log(probs)
         nll[np.isinf(nll)] = np.finfo(nll.dtype).min
         assert not np.any(np.isnan(nll))
         return nll

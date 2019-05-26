@@ -23,10 +23,10 @@ class Parametric(Leaf):
         return self._type
 
 class In_Latent(Leaf):
-    def __init__(self, bin_value=0, inference_value=1, interface_index=None, scope=None):
+    def __init__(self, bin_value=0, log_inference_value=0, interface_index=None, scope=None):
         Leaf.__init__(self, scope=scope)
         self.bin_value = bin_value
-        self.inference_value = inference_value
+        self.log_inference_value = log_inference_value
         self.interface_index = interface_index
 
 
