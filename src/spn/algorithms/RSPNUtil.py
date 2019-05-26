@@ -8,6 +8,8 @@ from spn.algorithms.oSLRAUStat import update_mean_and_covariance, update_curr_me
 from spn.algorithms.MPE import mpe_sum, mpe_prod
 from spn.structure.Base import get_topological_order_layers
 
+from spn.algorithms.oSLRAU import oSLRAU_sum
+
 
 def initialise_mean_and_covariance(node, parent_result, data):
     scope = node.scope.copy()
@@ -47,10 +49,10 @@ def initialise_mean_and_covariance(node, parent_result, data):
 
 node_functions = get_node_funtions()
 _node_top_down_oSLRAU = node_functions[0].copy()
-_node_top_down_oSLRAU.update({Sum: mpe_sum, Product: mpe_prod})
+_node_top_down_oSLRAU.update({Sum: oSLRAU_sum, Product: mpe_prod})
 
 
-def oSLRAU_eval_spn_top_down_helper(root, oSLRAU_params, eval_functions = _node_top_down_oSLRAU, all_results=None, parent_result=None, **args):
+def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_functions = _node_top_down_oSLRAU, all_results=None, parent_result=None, **args):
     """
     evaluates an spn top to down
 
@@ -68,14 +70,13 @@ def oSLRAU_eval_spn_top_down_helper(root, oSLRAU_params, eval_functions = _node_
     else:
         all_results.clear()
 
-    all_decisions = []
     for node_type, func in eval_functions.items():
         if "_eval_func" not in node_type.__dict__:
             node_type._eval_func = []
         node_type._eval_func.append(func)
 
     all_results[root] = [parent_result]
-    nodes_to_update = []
+    # nodes_to_update = []
     in_latent_dict = {}
 
     for layer in reversed(get_topological_order_layers(root)):
@@ -88,20 +89,16 @@ def oSLRAU_eval_spn_top_down_helper(root, oSLRAU_params, eval_functions = _node_
             # print("Gaussian", isinstance(n, Gaussian))
             if isinstance(n, Product):
                 result = func(n, param, **args)
-                # if update_node is not None:
-                #     nodes_to_update.append(update_node)
-
 
             elif isinstance(n, Leaf):
-                #print("inLeaf", isinstance(n, Leaf))
-            # result = func(n, param, **args)
+                # print("inLeaf", isinstance(n, Leaf))
                 instances = np.concatenate(param)
                 if len(instances) > 0:
                     n.count = n.count + len(instances)
                     if type(n) == In_Latent:
                         in_latent_dict[n] = instances
-                    # else:
-                    #     update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
+                    elif update_leaves == True:
+                        update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
 
             else:
                 result = func(n, param, **args)
@@ -120,4 +117,4 @@ def oSLRAU_eval_spn_top_down_helper(root, oSLRAU_params, eval_functions = _node_
         if len(node_type._eval_func) == 0:
             delattr(node_type, "_eval_func")
 
-    return all_results, nodes_to_update, in_latent_dict
+    return all_results, in_latent_dict
