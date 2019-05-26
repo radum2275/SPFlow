@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import copy
 from spn.structure.Base import Product, Sum, get_nodes_by_type, eval_spn_top_down, Out_Latent, assign_ids, \
-    rebuild_scopes_bottom_up
+    rebuild_scopes_bottom_up, Leaf
 from spn.structure.leaves.parametric.Parametric import In_Latent
 from spn.algorithms.Inference import log_likelihood
 
@@ -10,7 +10,13 @@ from spn.algorithms.oSLRAU import oSLRAU_eval_spn_top_down, oSLRAU_update_struct
 
 from spn.algorithms.RSPNUtil import initialise_mean_and_covariance
 
-from spn.algorithms.RSPNUtil import oSLRAU_eval_spn_top_down_helper
+from spn.algorithms.RSPNUtil import eval_rspn_top_down_partial_update
+
+from spn.io.Graphics import plot_spn
+
+from spn.algorithms.TransformStructure import Prune
+
+from spn.algorithms.LearningWrappers import learn_parametric
 
 
 class RSPN():
@@ -25,7 +31,6 @@ class RSPN():
         self.len_sequence = None
 
     def set_len_sequence(self, data):
-
         assert self.num_variables is not None, "number of variables not specified in RSPN"
         self.len_sequence = int(data.shape[1] / self.num_variables)
 
@@ -38,18 +43,14 @@ class RSPN():
         initial_rows = np.arange(initial_data.shape[0])
         for node in nodes:
             if isinstance(node, Product):
-                initialise_mean_and_covariance(node, initial_rows, initial_data )
+                initialise_mean_and_covariance(node, initial_rows, initial_data)
 
         latent_val_node_list = []
         for i in range(self.num_latent_values):
             spn_i = copy.deepcopy(initial_spn)
             latent_val_node_list.append(spn_i)
 
-        # in_latent_children = []
         scope = [self.num_variables + i for i in range(self.num_latent_variables)]
-        # for i in range(self.num_latent_variables):
-        #     in_latent_i = In_Latent(bin_value=0, scope=scope)
-        #     in_latent_children.append(in_latent_i)
 
         interface_node_list = []
         for i in range(self.num_latent_variables):
@@ -58,10 +59,12 @@ class RSPN():
             for j, spn in enumerate(latent_val_node_list):
                 weights = np.random.random_sample(self.num_latent_variables)
                 weights = list(weights / np.sum(weights))
+
                 in_latent_children = []
                 for i in range(self.num_latent_variables):
                     in_latent_i = In_Latent(bin_value=0, interface_index=i, scope=scope)
                     in_latent_children.append(in_latent_i)
+
                 s_j = Sum(weights=weights, children=in_latent_children)
                 s_j.count = 1
 
@@ -87,7 +90,6 @@ class RSPN():
             weights = np.random.random_sample(self.num_latent_values)
             weights = list(weights / np.sum(weights))
             interface_spn_i = Sum(weights=weights, children=latent_val_node_list_copy)
-            # interface_spn_i = copy.deepcopy(spn)
             interface_node_list.append(interface_spn_i)
 
         self.template_spn = Out_Latent(children=interface_node_list)
@@ -117,14 +119,13 @@ class RSPN():
     def evaluate_top_spn_bottom_up(self, data, unrolled_network_lls_per_node):
 
         nodes = get_nodes_by_type(self.top_spn)
-        lls_per_node = unrolled_network_lls_per_node[self.len_sequence-1].copy()
+        lls_per_node = unrolled_network_lls_per_node[self.len_sequence - 1].copy()
         dummy_data = np.zeros((data.shape[0], self.num_latent_variables))
 
-        # for k, node in enumerate(nodes):
         for node in nodes:
             if isinstance(node, In_Latent):
                 k = node.interface_index
-                node.inference_value = np.exp(lls_per_node[:, 1 + k]).reshape(-1, 1)
+                node.log_inference_value = lls_per_node[:, 1 + k].reshape(-1, 1)
 
         lls_per_node = np.zeros((data.shape[0], len(nodes)))
         log_likelihood(self.top_spn, dummy_data, lls_matrix=lls_per_node)
@@ -141,29 +142,32 @@ class RSPN():
                                                                                 parent_result=instance_ids,
                                                                                 data=dummy_data,
                                                                                 lls_per_node=lls_per_node)
-        #i = 0
+
         for in_latent_node, instances in in_latent_dict.items():
-            #interface_node_index = in_latent_node.scope[i] - self.num_variables
             self.template_spn.out_latent_winner[instances] = in_latent_node.interface_index
-            #i = i+1
 
         return
 
-    def evaluate_rspn(self, data, oSLRAU_params, unroll, full_update):
+    def evaluate_rspn(self, data, oSLRAU_params, unroll, full_update, update_leaves=None):
 
-        assert unroll == 'backward' or unroll == 'forward'; "specify unroll - forward or backward"
-        assert data.shape[1] == self.num_variables*self.len_sequence, "data columns not equal to number of variables time length of sequence"
+        assert unroll == 'backward' or unroll == 'forward';
+        "specify unroll as forward or backward"
+        assert data.shape[
+                   1] == self.num_variables * self.len_sequence, "data columns not equal to number of variables time length of sequence"
+        assert full_update == True or full_update == False, "Specify full_update as True or False"
+        if full_update == False:
+            assert update_leaves == True or update_leaves == False, "For partial update, specify whether update_leaves is True or False"
+        else:
+            assert update_leaves == None, "Leaves are always updated when full_update is True, specify update_leaves as None"
+
         nodes = get_nodes_by_type(self.template_spn)
-        # lls_per_node = np.zeros((data.shape[0], len(nodes)))
-
         in_latent_index = []
         for j in range(len(nodes)):
             if isinstance(nodes[j], In_Latent):
                 in_latent_index.append(j)
 
         for index in in_latent_index:
-            k = nodes[index].interface_index
-            nodes[index].inference_value = 1
+            nodes[index].log_inference_value = 0
 
         unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data, unroll)
 
@@ -171,14 +175,12 @@ class RSPN():
         self.evaluate_top_spn_top_down(data, top_spn_lls_per_node, oSLRAU_params)
 
         nodes_to_update = self.evaluate_rspn_top_down(data, unrolled_network_lls_per_node,
-                                                      oSLRAU_params, unroll, full_update)
+                                                      oSLRAU_params, unroll, full_update, update_leaves)
         return nodes_to_update
 
     def evaluate_rspn_bottom_up(self, data, unroll):
 
         nodes = get_nodes_by_type(self.template_spn)
-        # lls_per_node = np.zeros((data.shape[0], len(nodes)))
-
         in_latent_index = []
         for j in range(len(nodes)):
             if isinstance(nodes[j], In_Latent):
@@ -189,70 +191,66 @@ class RSPN():
 
             lls_per_node = np.zeros((data.shape[0], len(nodes)))
             if unroll == 'backward':
-                j = self.len_sequence - i -1
+                j = self.len_sequence - i - 1
                 data_i = data[:, (j * self.num_variables): (j * self.num_variables) + (self.num_variables)]
             else:
-                data_i = data[:, (i*self.num_variables) : (i*self.num_variables) + (self.num_variables)]
+                data_i = data[:, (i * self.num_variables): (i * self.num_variables) + (self.num_variables)]
 
             assert data_i.shape[1] == self.num_variables
+
             log_likelihood(self.template_spn, data_i, lls_matrix=lls_per_node)
             unrolled_network_lls_per_node.append(lls_per_node)
-            # for k, index in enumerate(in_latent_index):
+
             for index in in_latent_index:
                 k = nodes[index].interface_index
-                nodes[index].inference_value = np.exp(lls_per_node[:, 1 + k]).reshape(-1, 1)
+                nodes[index].log_inference_value = lls_per_node[:, 1 + k].reshape(-1, 1)
 
         return unrolled_network_lls_per_node
 
-    def evaluate_rspn_top_down(self, data, unrolled_network_lls_per_node, oSLRAU_params, unroll, full_update):
+    def evaluate_rspn_top_down(self, data, unrolled_network_lls_per_node, oSLRAU_params, unroll, full_update,
+                               update_leaves):
 
-        # l = self.len_sequence
-        # num_variables = data.shape[1]
-        # self.template_spn.out_latent_winner = np.zeros((data.shape[0],), dtype=int)
         for i in range(self.len_sequence):
 
             instance_ids = np.arange(data.shape[0])
             if unroll == 'backward':
-                data_i = data[:, (i*self.num_variables) : (i*self.num_variables) + (self.num_variables)]
-                # lls_per_node = unrolled_network_lls_per_node[i]
-            else :
+                data_i = data[:, (i * self.num_variables): (i * self.num_variables) + (self.num_variables)]
+
+            else:
                 j = self.len_sequence - i - 1
                 data_i = data[:, (j * self.num_variables): (j * self.num_variables) + (self.num_variables)]
-
 
             assert data_i.shape[1] == self.num_variables
             lls_per_node = unrolled_network_lls_per_node[self.len_sequence - i - 1]
 
             if full_update == False:
                 if i == 0:
-
-                    all_results, nodes_to_update, in_latent_dict = oSLRAU_eval_spn_top_down(self.template_spn, oSLRAU_params,
+                    all_results, nodes_to_update, in_latent_dict = oSLRAU_eval_spn_top_down(self.template_spn,
+                                                                                            oSLRAU_params,
                                                                                             parent_result=instance_ids,
                                                                                             data=data_i,
                                                                                             lls_per_node=lls_per_node)
                 else:
-
                     parent_result = [np.array(instance_ids)]
                     children_row_ids = out_latent(self.template_spn, parent_result)
 
-                    for node, param in children_row_ids.items():
-                        grand_children_row_ids = oSLRAU_sum(node, [param], data=data_i, lls_per_node=lls_per_node)
+                    for child, child_param in children_row_ids.items():
+                        grand_children_row_ids = oSLRAU_sum(child, [child_param], data=data_i,
+                                                            lls_per_node=lls_per_node)
 
-                        for node_1, param_1 in grand_children_row_ids.items():
-                            all_results, nodes_to_update, in_latent_dict = oSLRAU_eval_spn_top_down_helper(node_1,
-                                                                                                    oSLRAU_params,
-                                                                                                    parent_result=param_1,
-                                                                                                    data=data_i,
-                                                                                                    lls_per_node=lls_per_node)
-
+                        for grand_child, grand_child_param in grand_children_row_ids.items():
+                            all_results, in_latent_dict = eval_rspn_top_down_partial_update(grand_child,
+                                                                                            oSLRAU_params,
+                                                                                            update_leaves,
+                                                                                            parent_result=grand_child_param,
+                                                                                            data=data_i,
+                                                                                            lls_per_node=lls_per_node)
 
                             for in_latent_node, instances in in_latent_dict.items():
-
                                 self.template_spn.out_latent_winner[instances] = in_latent_node.interface_index
 
-
-
             else:
+
                 all_results, nodes_to_update, in_latent_dict = oSLRAU_eval_spn_top_down(self.template_spn,
                                                                                         oSLRAU_params,
                                                                                         parent_result=instance_ids,
@@ -260,38 +258,76 @@ class RSPN():
                                                                                         lls_per_node=lls_per_node)
 
                 for in_latent_node, instances in in_latent_dict.items():
-                    # interface_node_index = in_latent_node.scope[i] - self.num_variables
                     self.template_spn.out_latent_winner[instances] = in_latent_node.interface_index
-
-
-
 
         return nodes_to_update
 
     def update_template_spn(self, oSLRAU_params, nodes_to_update):
+
         nodes = get_nodes_by_type(self.template_spn)
         tot_nodes_len = len(nodes)
         self.template_spn = oSLRAU_update_structure(self.template_spn, oSLRAU_params, tot_nodes_len, nodes_to_update)
 
         return self.template_spn
 
-    def rspn_log_likelihood(self, data, unroll):
+    def log_likelihood(self, data, unroll):
 
-        assert data.shape[1] == self.num_variables*self.len_sequence, "data columns not equal to number of variables times length of sequence"
+        assert data.shape[
+                   1] == self.num_variables * self.len_sequence, "data columns not equal to number of variables times length of sequence"
+
         nodes = get_nodes_by_type(self.template_spn)
-        # lls_per_node = np.zeros((data.shape[0], len(nodes)))
-
         in_latent_index = []
         for j in range(len(nodes)):
             if isinstance(nodes[j], In_Latent):
                 in_latent_index.append(j)
 
         for index in in_latent_index:
-            k = nodes[index].interface_index
-            nodes[index].inference_value = 1
+            nodes[index].log_inference_value = 0
 
         unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data, unroll)
 
         top_spn_lls_per_node = self.evaluate_top_spn_bottom_up(data, unrolled_network_lls_per_node)
 
         return top_spn_lls_per_node[:, 0]
+
+    def get_unrolled_rspn(self, len_sequence):
+
+        unroll_spn = []
+        for i in range(len_sequence):
+            spn_i = copy.deepcopy(self.template_spn)
+            unroll_spn.append(spn_i)
+
+        top_spn = copy.deepcopy(self.top_spn)
+        unroll_spn.append(top_spn)
+
+        for i in range(len(unroll_spn)):
+            spn = unroll_spn[len_sequence - i]
+            nodes = get_nodes_by_type(spn)
+            for node in nodes:
+                if not isinstance(node, Leaf):
+                    node_children = node.children.copy()
+                    for child in node_children:
+                        if type(child) == In_Latent:
+                            if len_sequence - i > 0:
+                                below_network_out_latent = unroll_spn[(len_sequence - i) - 1]
+                                below_interface_node = below_network_out_latent.children[child.interface_index]
+                                node.children.extend([below_interface_node])
+                                node.children.remove(child)
+                            else:
+                                node.children.remove(child)
+
+        nodes = get_nodes_by_type(top_spn)
+        for node in nodes:
+            if type(node) == Out_Latent:
+                del node
+            if not isinstance(node, Leaf):
+                for child in node.children:
+                    if not isinstance(child, Leaf):
+                        if len(child.children) == 0:
+                            node.children.remove(child)
+                            del child
+
+        assign_ids(top_spn)
+        rebuild_scopes_bottom_up(top_spn)
+        # Prune(top_spn)
+        return top_spn
