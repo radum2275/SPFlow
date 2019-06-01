@@ -13,9 +13,9 @@ from spn.algorithms.oSLRAU import oSLRAU_sum
 
 def initialise_mean_and_covariance(node, parent_result, data):
     scope = node.scope.copy()
-    l = data.shape[1]
+    tot_vars = data.shape[1]
     for scpe in node.scope:
-        if scpe >= l:
+        if scpe >= tot_vars:
             scope.remove(scpe)
 
     x = data[np.ix_(parent_result, scope)]
@@ -39,20 +39,21 @@ def initialise_mean_and_covariance(node, parent_result, data):
 
     # update covariance
     dx = x - new_mean
-    #dm = new_mean - mean
 
-    new_cov = (n * cov + dx.T.dot(dx)) / (n + m) #- np.outer(dm, dm)
+    new_cov = (n * cov + dx.T.dot(dx)) / (n + m)  # - np.outer(dm, dm)
 
     # update node values
     node.mean = new_mean
     node.cov = new_cov
+
 
 node_functions = get_node_funtions()
 _node_top_down_oSLRAU = node_functions[0].copy()
 _node_top_down_oSLRAU.update({Sum: oSLRAU_sum, Product: mpe_prod})
 
 
-def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_functions = _node_top_down_oSLRAU, all_results=None, parent_result=None, **args):
+def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_functions=_node_top_down_oSLRAU,
+                                      all_results=None, parent_result=None, **args):
     """
     evaluates an spn top to down
 
@@ -62,7 +63,7 @@ def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_f
     :param all_results: is a dictionary that contains k:Class of the node, v:result of the evaluation of the lambda function for that node.
     :param parent_result: initial input to the root node
     :param args: free parameters that will be fed to the lambda functions.
-    :return: the result of computing and propagating all the values throught the network
+    :return: the result of computing and propagating all the values through the network, and data points reaching each in latent node
     """
 
     if all_results is None:
@@ -84,9 +85,7 @@ def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_f
             func = n.__class__._eval_func[-1]
 
             param = all_results[n]
-            # print("Leaf", isinstance(n, Leaf))
-            # print("patametric", isinstance(n, Parametric))
-            # print("Gaussian", isinstance(n, Gaussian))
+
             if isinstance(n, Product):
                 result = func(n, param, **args)
 
@@ -97,12 +96,11 @@ def eval_rspn_top_down_partial_update(root, oSLRAU_params, update_leaves, eval_f
                     n.count = n.count + len(instances)
                     if type(n) == In_Latent:
                         in_latent_dict[n] = instances
-                    elif update_leaves == True:
+                    elif update_leaves:
                         update_mean_and_covariance(n, instances, oSLRAU_params, **args)  # works only for gaussian nodes
 
             else:
                 result = func(n, param, **args)
-
 
             if result is not None and not isinstance(n, Leaf):
                 assert isinstance(result, dict)
