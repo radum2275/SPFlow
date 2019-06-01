@@ -30,6 +30,77 @@ class RSPN():
         self.top_spn = None
         self.len_sequence = None
 
+    def build_initial_template(self, mini_batch, ds_context, len_sequence_varies=False):
+
+        if len_sequence_varies:
+            assert type(mini_batch) is list, 'When sequence length varies, data is a list of numpy arrays'
+        else:
+            assert type(mini_batch) is np.ndarray, 'data should be of type numpy array'
+
+        print("Building initial spn")
+
+        learn_spn_data = self.__get_learn_spn_data(mini_batch, len_sequence_varies)
+
+        spn = learn_parametric(learn_spn_data, ds_context)
+        # print("initial spn", spn)
+
+        print("Building initial template spn")
+        initial_template_spn = copy.deepcopy(self.initialise_template(spn, learn_spn_data))
+
+        print("Building top spn")
+        top_spn = self.initialise_top_spn()
+
+        return spn, initial_template_spn, top_spn
+
+    def __get_learn_spn_data(self, mini_batch, len_sequence_varies):
+
+        if len_sequence_varies:
+            for i in range(len(mini_batch)):
+                mini_batch_data = mini_batch[i]
+                learn_spn_data_i = mini_batch_data[:, 0:self.num_variables]
+                if i == 0:
+                    learn_spn_data = learn_spn_data_i
+                else:
+                    learn_spn_data = np.concatenate((learn_spn_data, learn_spn_data_i))
+        else:
+            learn_spn_data = mini_batch[:, 0:self.num_variables]
+
+        return learn_spn_data
+
+    def learn_rspn(self, mini_batch, update_template, oSLRAU_params, unroll, full_update, update_leaves,
+                   len_sequence_varies=False):
+
+        if len_sequence_varies:
+            assert type(mini_batch) is list, 'When sequence length varies, data is a list of numpy arrays'
+            print("Evaluating rspn and collecting nodes to update")
+
+            for i in range(len(mini_batch)):
+                mini_batch_data = mini_batch[i]
+                self.set_len_sequence(mini_batch_data)
+                # print("length of sequence:", self.get_len_sequence())
+
+                nodes_to_update = self.evaluate_rspn(mini_batch_data, oSLRAU_params, unroll, full_update,
+                                                     update_leaves)
+        else:
+            assert type(mini_batch) is np.ndarray, 'data should be of type numpy array'
+
+            self.set_len_sequence(mini_batch)
+            len_seq = self.get_len_sequence()
+
+            # print("Length of the sequence in mini_batch:", len_seq)
+            assert mini_batch.shape[
+                       1] == self.num_variables * self.len_sequence, "data columns not equal to number of variables time length of sequence"
+            # print("Evaluating rspn and collecting nodes to update")
+
+            nodes_to_update = self.evaluate_rspn(mini_batch, oSLRAU_params, unroll, full_update,
+                                                 update_leaves)
+
+        if update_template:
+            print("Updating template spn")
+            self.update_template_spn(oSLRAU_params, nodes_to_update)
+
+        return self.template_spn
+
     def set_len_sequence(self, data):
         assert self.num_variables is not None, "number of variables not specified in RSPN"
         self.len_sequence = int(data.shape[1] / self.num_variables)
@@ -270,10 +341,7 @@ class RSPN():
 
         return self.template_spn
 
-    def log_likelihood(self, data, unroll):
-
-        assert data.shape[
-                   1] == self.num_variables * self.len_sequence, "data columns not equal to number of variables times length of sequence"
+    def log_likelihood(self, data, unroll, len_sequence_varies):
 
         nodes = get_nodes_by_type(self.template_spn)
         in_latent_index = []
@@ -281,14 +349,46 @@ class RSPN():
             if isinstance(nodes[j], In_Latent):
                 in_latent_index.append(j)
 
-        for index in in_latent_index:
-            nodes[index].log_inference_value = 0
+        if len_sequence_varies:
+            assert type(data) is list, 'When sequence length varies, data is a list of numpy arrays'
+            print("Evaluating rspn bottom up")
+            for i in range(len(data)):
+                for index in in_latent_index:
+                    nodes[index].log_inference_value = 0
 
-        unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data, unroll)
+                each_data_point = data[i]
+                self.set_len_sequence(each_data_point)
 
-        top_spn_lls_per_node = self.evaluate_top_spn_bottom_up(data, unrolled_network_lls_per_node)
+                # print("length of sequence:", self.get_len_sequence())
 
-        return top_spn_lls_per_node[:, 0]
+
+                unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(each_data_point, unroll)
+                top_spn_lls_per_node = self.evaluate_top_spn_bottom_up(each_data_point, unrolled_network_lls_per_node)
+
+                if i == 0:
+                    ll = top_spn_lls_per_node[:, 0]
+                else:
+                    ll = np.concatenate((ll, top_spn_lls_per_node[:, 0]))
+        else:
+            assert type(data) is np.ndarray, 'data should be of type numpy array'
+            for index in in_latent_index:
+                nodes[index].log_inference_value = 0
+
+            self.set_len_sequence(data)
+            len_seq = self.get_len_sequence()
+
+            print("Length of the sequence in mini_batch:", len_seq)
+            assert data.shape[
+                       1] == self.num_variables * self.len_sequence, "data columns not equal to number of variables times length of sequence"
+            print("Evaluating rspn bottom up")
+
+            unrolled_network_lls_per_node = self.evaluate_rspn_bottom_up(data, unroll)
+
+            top_spn_lls_per_node = self.evaluate_top_spn_bottom_up(data, unrolled_network_lls_per_node)
+
+            ll = top_spn_lls_per_node[:, 0]
+
+        return ll
 
     def get_unrolled_rspn(self, len_sequence):
 
