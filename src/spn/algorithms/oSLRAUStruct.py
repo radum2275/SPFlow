@@ -1,4 +1,3 @@
-
 from spn.algorithms.oSLRAUStat import iterate_corrs
 import numpy as np
 from spn.structure.Base import Product, Sum, assign_ids, Leaf
@@ -6,18 +5,17 @@ from spn.structure.leaves.parametric.Parametric import Categorical, Gaussian, Mu
 
 
 def update_structure(node, params, tot_nodes_len=None):
-
     corr_threshold = params.corrthresh
-    for i,j in iterate_corrs(node, corr_threshold):
+    for i, j in iterate_corrs(node, corr_threshold):
         if i == j:
             continue
 
         ci = None
         cj = None
         for child in node.children:
-            if (i+node.scope[0]) in child.scope:
+            if (i + node.scope[0]) in child.scope:
                 ci = child
-            if (j+node.scope[0]) in child.scope:
+            if (j + node.scope[0]) in child.scope:
                 cj = child
 
         if ci is not None and cj is not None and ci != cj:
@@ -26,9 +24,8 @@ def update_structure(node, params, tot_nodes_len=None):
 
     return
 
+
 def merge_children(node, ci, cj, params, tot_nodes_len=None):
-
-
     mvmaxscope = params.mvmaxscope
 
     ci = ci
@@ -43,8 +40,8 @@ def merge_children(node, ci, cj, params, tot_nodes_len=None):
 
     return
 
-def merge_into_mvleaf(node, ci, cj, scope, params, tot_nodes_len=None):
 
+def merge_into_mvleaf(node, ci, cj, scope, params, tot_nodes_len=None):
     if isinstance(ci, Leaf) and isinstance(cj, Leaf):
         # mean = node.mean
         # mean = mean[scope[0]:scope[-1] + 1]
@@ -62,7 +59,6 @@ def merge_into_mvleaf(node, ci, cj, scope, params, tot_nodes_len=None):
         cov = cov[np.ix_(r, r)]
         # stdev = np.sqrt(np.abs(cov))
 
-
         c = Multivariate_Gaussian(mean, cov)
         c.scope = scope
         c.id = tot_nodes_len
@@ -73,8 +69,8 @@ def merge_into_mvleaf(node, ci, cj, scope, params, tot_nodes_len=None):
 
     return
 
-def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
 
+def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
     assert tot_nodes_len is not None, "total nodes in initial structure cannot be None"
 
     mean = node.mean
@@ -90,14 +86,14 @@ def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
     # cov = [cov[s] for s in scope]
     # cov = cov[scope[0]:(scope[-1]+1), scope[0]:(scope[-1]+1)]
 
-    p1 = Product(children=[ci,cj], mean = mean, cov = cov)
+    p1 = Product(children=[ci, cj], mean=mean, cov=cov)
     p1.scope = scope
 
     p2 = create_factored_dist(scope, tot_nodes_len, node, params)
 
     if params.equalweight:
-        p1.count = 1 #int(node.count/2)
-        p2.count = 1 #node.count - p1.count
+        p1.count = 1
+        p2.count = 1
     else:
         p1.count = node.count
         p2.count = 1
@@ -105,12 +101,12 @@ def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
     s = Sum(children=[p1, p2])
     s.count = node.count
 
-    w1 = float((p1.count+1)/(s.count+2))
-    w2 = float((p2.count+1)/(s.count+2))
-    tot = w1+w2
+    w1 = float((p1.count + 1) / (s.count + 2))
+    w2 = float((p2.count + 1) / (s.count + 2))
+    tot = w1 + w2
 
-    w1 = w1/tot
-    w2 = w2/tot
+    w1 = w1 / tot
+    w2 = w2 / tot
     s.weights = [w1, w2]
     s.scope = scope
 
@@ -122,34 +118,10 @@ def merge_into_sumnode(node, ci, cj, scope, params, tot_nodes_len=None):
     node.children.remove(ci)
     node.children.remove(cj)
 
-    #assign_ids(node)
-
-    #print()
-
-
     return
 
-# def create_factored_dist(scope, tot_nodes_len):
-#
-#     children = []
-#     for i, s in enumerate(scope, 1):
-#         #print(s)
-#         c = Gaussian(mean = 0, stdev = 1, scope = [s])
-#         c.id = tot_nodes_len + 2 + i
-#         children.append(c)
-#     #print(children)
-#
-#     mean_p2 = np.zeros(len(scope))
-#     cov_p2 = np.identity(len(scope))
-#
-#     p2 = Product(children=children, mean = mean_p2, cov = cov_p2)
-#     p2.count = 0
-#     p2.scope = scope
-#
-#     return p2
 
 def create_factored_dist(scope, tot_nodes_len, node, params):
-
     children = []
 
     if params.currVals:
@@ -169,23 +141,20 @@ def create_factored_dist(scope, tot_nodes_len, node, params):
         mean_p2 = np.zeros(len(scope))
         cov_p2 = np.identity(len(scope))
 
-
-
     for i, s in enumerate(scope, 0):
         # print(s)
         if params.currVals:
-            assert stdev[i][i] or mean[i] is not np.nan, "nan stdev or mean at %s" %(node)
-            c = Gaussian(mean = mean[i], stdev = stdev[i][i], scope = [s])
+            assert stdev[i][i] or mean[i] is not np.nan, "nan stdev or mean at %s" % (node)
+            c = Gaussian(mean=mean[i], stdev=stdev[i][i], scope=[s])
         else:
             c = Gaussian(mean=0, stdev=1, scope=[s])
 
-        c.id = tot_nodes_len + 2 + i+1
+        c.id = tot_nodes_len + 2 + i + 1
         children.append(c)
     # print(children)
 
-
     if params.currVals:
-        p2 = Product(children=children, mean = mean, cov = cov)
+        p2 = Product(children=children, mean=mean, cov=cov)
     else:
         p2 = Product(children=children, mean=mean_p2, cov=cov_p2)
     # p2.count = 0

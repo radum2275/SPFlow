@@ -13,22 +13,18 @@ from spn.structure.leaves.parametric.Parametric import Parametric, Gaussian, In_
 
 class oSLRAUParams:
     """
-	Parameters
-	----------
-	batchsize : number of samples in a mini-batch.
-	            if 0, use the entire set as one batch.
-	mergebatch : number of samples a product node needs to see before updating
-	             its structure.
-	corrthresh : correlation coefficient threshold above which two variables
-	             are considered correlated.
-	mvmaxscope : number of variables that can be combined into a multivariate
-	             leaf node.
+    Parameters
+    ----------
+    mergebatch : number of samples a product node needs to see before updating
+                 its structure.
+    corrthresh : correlation coefficient threshold above which two variables
+                 are considered correlated.
+    mvmaxscope : number of variables that can be combined into a multivariate
+                 leaf node.
 
-	"""
+    """
 
-    def __init__(self, batchsize=128, mergebatch_threshold=128, corrthresh=0.1, mvmaxscope=1, equalweight = False, currVals = True):
-
-        self.batchsize = batchsize
+    def __init__(self, mergebatch_threshold=128, corrthresh=0.1, mvmaxscope=1, equalweight=False, currVals=True):
         self.mergebatch_threshold = mergebatch_threshold
         self.corrthresh = corrthresh
         self.mvmaxscope = mvmaxscope
@@ -41,8 +37,6 @@ def merge_input_vals(l):
 
 
 def oSLRAU_prod(node, parent_result, oSLRAU_params, data=None, lls_per_node=None):
-
-
     nodes_to_update = None
     if parent_result is None:
         return None, nodes_to_update
@@ -63,16 +57,16 @@ def oSLRAU_prod(node, parent_result, oSLRAU_params, data=None, lls_per_node=None
 
         if node.count > merge_threshold:
             nodes_to_update = node
+            # print(nodes_to_update)
             update_curr_mean_and_covariance(node, parent_result, oSLRAU_params,
-                                            data)  # update curr_mean and curr_cov parameters of prodcut node using current data
+                                            data)  # update curr_mean and curr_cov parameters of product node using
+            # current data
 
     return children_row_ids, nodes_to_update
 
 
-
 def oSLRAU_sum(node, parent_result, data=None, lls_per_node=None):
-
-    if parent_result is None :
+    if parent_result is None:
         return None
 
     parent_result = merge_input_vals(parent_result)
@@ -92,20 +86,17 @@ def oSLRAU_sum(node, parent_result, data=None, lls_per_node=None):
         node.count = node.count + len(parent_result)
         weights = []
         for i, c in enumerate(node.children):
-            # print(len(children_row_ids[i])/len(parent_result))
-            # w[i] = len(children_row_ids[i])/len(parent_result)
-            # print(node.weights)
-            weights.append(node.weights[i] + (len(children_row_ids[c])/len(parent_result)))
-            #print(node.weights[i])
+            weights.append(node.weights[i] + (len(children_row_ids[c]) / len(parent_result)))
+            # print(node.weights[i])
 
         for i, c in enumerate(node.children):
-            #print(node.weights)
+            # print(node.weights)
             node.weights[i] = float(weights[i]) / np.sum(weights)
 
     return children_row_ids
 
 
-def out_latent(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+def out_latent(node, parent_result, data=None, lls_per_node=None):
     if len(parent_result) == 0:
         return None
 
@@ -126,8 +117,8 @@ _node_top_down_oSLRAU.update({Sum: oSLRAU_sum, Product: oSLRAU_prod, Out_Latent:
 _node_bottom_up_mpe.update({Sum: sum_likelihood, Product: prod_likelihood})
 
 
-
-def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSLRAU, node_bottom_up_mpe=_node_bottom_up_mpe,
+def oSLRAU(node, input_data, oSLRAU_params, update_structure, node_top_down_mpe=_node_top_down_oSLRAU,
+           node_bottom_up_mpe=_node_bottom_up_mpe,
            in_place=False):
     valid, err = is_valid(node)
     assert valid, err
@@ -139,12 +130,6 @@ def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSL
 
     assert oSLRAU_params, "missing parameters for oSLRAU"
 
-    #print('oSLRAU')
-
-    # _node_top_down_oSLRAU[Product] = oSLRAU_prod
-    # _node_top_down_oSLRAU[Sum] = oSLRAU_sum
-
-    # oSLRAU_params = oSLRAUParams()
     oSLRAU_params = oSLRAU_params
     nodes = get_nodes_by_type(node)
     tot_nodes_len = len(nodes)
@@ -156,16 +141,18 @@ def oSLRAU(node, input_data, oSLRAU_params, node_top_down_mpe=_node_top_down_oSL
 
     instance_ids = np.arange(data.shape[0])
 
-    # one pass top down to decide on the max branch until it reaches a leaf, then it fills the nan slot with the mode
-    all_results, nodes_to_update = oSLRAU_eval_spn_top_down(node, oSLRAU_params, node_top_down_mpe, parent_result=instance_ids,
+    # one pass top down to decide on the max branch until it reaches a leaf
+    all_results, nodes_to_update, in_latent_dict = oSLRAU_eval_spn_top_down(node, oSLRAU_params, node_top_down_mpe,
+                                                            parent_result=instance_ids,
                                                             data=data, lls_per_node=lls_per_node)
+    if update_structure:
+        spn = oSLRAU_update_structure(node, oSLRAU_params, tot_nodes_len, nodes_to_update)
+        return spn
+    else:
+        return node
 
-    spn = oSLRAU_update_structure(node, oSLRAU_params, tot_nodes_len, nodes_to_update)
 
-    return spn
-
-
-def oSLRAU_update_structure(root,  oSLRAU_params, tot_nodes_len, nodes_to_update):
+def oSLRAU_update_structure(root, oSLRAU_params, tot_nodes_len, nodes_to_update):
     for node in nodes_to_update:
         update_structure(node, oSLRAU_params, tot_nodes_len)
 
@@ -175,17 +162,22 @@ def oSLRAU_update_structure(root,  oSLRAU_params, tot_nodes_len, nodes_to_update
     return root
 
 
-def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_down_oSLRAU, all_results=None, parent_result=None, **args):
+def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions=_node_top_down_oSLRAU, all_results=None,
+                             parent_result=None, **args):
     """
     evaluates an spn top to down
 
 
     :param root: spnt root
-    :param eval_functions: is a dictionary that contains k:Class of the node, v:lambda function that receives as parameters (node, parent_results, args**) and returns [node, intermediate_result]. This intermediate_result will be passed to node as parent_result. If intermediate_result is None, no further propagation occurs
-    :param all_results: is a dictionary that contains k:Class of the node, v:result of the evaluation of the lambda function for that node.
+    :param eval_functions: is a dictionary that contains k:Class of the node, v:lambda function that receives as
+     parameters (node, parent_results, args**) and returns [node, intermediate_result]. This intermediate_result will
+     be passed to node as parent_result. If intermediate_result is None, no further propagation occurs
+    :param all_results: is a dictionary that contains k:Class of the node, v:result of the evaluation of the lambda
+     function for that node.
     :param parent_result: initial input to the root node
     :param args: free parameters that will be fed to the lambda functions.
-    :return: the result of computing and propagating all the values throught the network
+    :return: the result of computing and propagating all the values through the network, nodes to update for oSLRAU and
+    data points reaching each in latent node for an rspn
     """
 
     if all_results is None:
@@ -193,7 +185,7 @@ def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_dow
     else:
         all_results.clear()
 
-    all_decisions = []
+    # all_decisions = []
     for node_type, func in eval_functions.items():
         if "_eval_func" not in node_type.__dict__:
             node_type._eval_func = []
@@ -208,18 +200,15 @@ def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_dow
             func = n.__class__._eval_func[-1]
 
             param = all_results[n]
-            # print("Leaf", isinstance(n, Leaf))
-            # print("patametric", isinstance(n, Parametric))
-            # print("Gaussian", isinstance(n, Gaussian))
+
             if isinstance(n, Product):
                 result, update_node = func(n, param, oSLRAU_params, **args)
                 if update_node is not None:
                     nodes_to_update.append(update_node)
 
-
             elif isinstance(n, Leaf):
-                #print("inLeaf", isinstance(n, Leaf))
-            # result = func(n, param, **args)
+                # print("inLeaf", isinstance(n, Leaf))
+                # result = func(n, param, **args)
                 instances = np.concatenate(param)
                 if len(instances) > 0:
                     n.count = n.count + len(instances)
@@ -230,7 +219,6 @@ def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_dow
 
             else:
                 result = func(n, param, **args)
-
 
             if result is not None and not isinstance(n, Leaf):
                 assert isinstance(result, dict)
@@ -246,4 +234,3 @@ def oSLRAU_eval_spn_top_down(root, oSLRAU_params, eval_functions = _node_top_dow
             delattr(node_type, "_eval_func")
 
     return all_results, nodes_to_update, in_latent_dict
-

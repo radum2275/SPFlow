@@ -3,13 +3,11 @@ from spn.structure.Base import Product, Leaf
 from spn.structure.leaves.parametric.Parametric import Gaussian, Multivariate_Gaussian, In_Latent
 
 
-def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= None):
-
-
+def update_mean_and_covariance(node, parent_result, params, data, lls_per_node=None):
     scope = node.scope.copy()
-    l = data.shape[1]
+    tot_vars = data.shape[1]
     for scpe in node.scope:
-        if scpe >= l:
+        if scpe >= tot_vars:
             scope.remove(scpe)
 
     x = data[np.ix_(parent_result, scope)]
@@ -66,9 +64,6 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
             mean = node.mean
             cov = node.cov
 
-        # elif type(node) == In_Latent:
-        #     return node
-        # print("in leaf update", node)
         curr_sample_sum = x.sum(axis=0)
         new_mean = ((n) * (mean) + curr_sample_sum) / (n + m)
 
@@ -94,23 +89,22 @@ def update_mean_and_covariance(node, parent_result, params, data, lls_per_node= 
 
 
 def iterate_corrs(node, corrthresh):
-        v = np.diag(node.cov).copy()
-        v[v<1e-4] = 1e-4
-        corrs = np.abs(node.cov) / np.sqrt(np.outer(v, v))
-        rows, cols = np.unravel_index(np.argsort(corrs.flatten()), corrs.shape)
+    v = np.diag(node.cov).copy()
+    v[v < 1e-4] = 1e-4
+    corrs = np.abs(node.cov) / np.sqrt(np.outer(v, v))
+    rows, cols = np.unravel_index(np.argsort(corrs.flatten()), corrs.shape)
 
-        for i, j in zip(reversed(rows), reversed(cols)):
-            if corrs[i, j] < corrthresh:
-                break
-            yield i,j
+    for i, j in zip(reversed(rows), reversed(cols)):
+        if corrs[i, j] < corrthresh:
+            break
+        yield i, j
 
 
-def update_curr_mean_and_covariance(node, parent_result, params, data, lls_per_node= None):
-
+def update_curr_mean_and_covariance(node, parent_result, params, data, lls_per_node=None):
     scope = node.scope.copy()
-    l = data.shape[1]
+    tot_vars = data.shape[1]
     for scpe in node.scope:
-        if scpe >= l:
+        if scpe >= tot_vars:
             scope.remove(scpe)
 
     x = data[np.ix_(parent_result, scope)]
