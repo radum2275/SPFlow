@@ -29,14 +29,15 @@ def multivariate_gaussian_likelihood(node, data=None, dtype=np.float64, scope=No
     probs.mask[marg_ids] = True
     probs[~probs.mask] = scipy_obj.pdf(observations, **params)
     probs.mask = np.ma.nomask
+    probs = probs.filled()
     return probs
 
 def in_latent_likelihood(node, data=None, dtype=np.float64):
     probs = np.ones((data.shape[0], 1), dtype=dtype)
-    if type(node.inference_value) == int:
-        probs.fill(node.inference_value)
+    if type(node.log_inference_value) == int:
+        probs.fill(node.log_inference_value)
     else:
-        probs = node.inference_value
+        probs = node.log_inference_value
     return probs
 
 def continuous_likelihood(node, data=None, dtype=np.float64):
