@@ -9,7 +9,7 @@ from spn.algorithms.SPMNHelper import split_on_decision_node
 from spn.algorithms.SPMNHelper import column_slice_data_by_scope
 from spn.algorithms.SPMNHelper import get_ds_context
 from spn.algorithms.SPMN import SPMNParams
-from spn.algorithms.SPMNRework import SPMN
+from spn.algorithms.SPMN import SPMN
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -20,7 +20,7 @@ class TestSPMN(unittest.TestCase):
         feature_names = ['X0', 'X1', 'x2', 'D0', 'X3', 'X4', 'X5', 'D1', 'X6', 'U']
         partial_order = [['X0', 'X1', 'x2'], ['D0'], ['X3', 'X4', 'X5'], ['D1'], ['X6', 'X7', 'U']]
         decision_nodes = ['D0', 'D1']
-        utility_node = ['U']
+        utility_node = ['U', 'X5']
         util_to_bin = False
 
         self.spmn = SPMN(partial_order, decision_nodes, utility_node, feature_names, util_to_bin)
@@ -62,18 +62,18 @@ class TestSPMN(unittest.TestCase):
 
     def test_get_ds_context(self):
 
-        data = self.data[:, 4:9]
+        data = self.data[:, 5:10]
         num_of_cols = data.shape[1]
         logging.debug(f'data {data}')
 
-        scope = [4, 5, 6, 7, 8]
-        feature_names = self.spmn.params.feature_names
-        util_to_bin = self.spmn.params.util_to_bin
-        utility_node = self.spmn.params.utility_node
+        scope = [5, 6, 7, 8, 9]
+        # feature_names = self.spmn.params.feature_names
+        # util_to_bin = self.spmn.params.util_to_bin
+        # utility_node = self.spmn.params.utility_node
 
-        params = SPMNParams(utility_node=utility_node, feature_names=feature_names, util_to_bin=util_to_bin)
+        # params = SPMNParams(utility_node=utility_node, feature_names=feature_names, util_to_bin=util_to_bin)
 
-        ds_context = get_ds_context(data, scope, params)
+        ds_context = get_ds_context(data, scope, self.spmn.params)
         meta_types = ds_context.get_meta_types_by_scope(scope)
         domains = ds_context.get_domains_by_scope(scope)
 
