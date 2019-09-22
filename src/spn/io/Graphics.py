@@ -47,8 +47,6 @@ def get_networkx_obj(spn, feature_labels=None):
                 label = "V" + str(n.scope[0])
                 shape = 'o'
 
-
-
         g.add_node(n.id, s=shape)
         labels[n.id] = label
 
