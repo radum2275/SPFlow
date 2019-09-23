@@ -36,7 +36,7 @@ def get_ds_context(data, scope, params):
         context = [MetaType.DISCRETE] * num_of_variables
 
         utility_indices = [utility_index for utility_index, var in enumerate(scope_var)
-                           for utility_var in params.utility_node
+                           for utility_var in params.utility_nodes
                            if utility_var == var]
 
         # update context for utility variables with MetaType.UTILITY

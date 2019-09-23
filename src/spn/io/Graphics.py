@@ -10,12 +10,14 @@ from networkx.drawing.nx_agraph import graphviz_layout
 # matplotlib.use('Agg')
 import logging
 
+
+
 logger = logging.getLogger(__name__)
 
 
 def get_networkx_obj(spn, feature_labels=None):
     import networkx as nx
-    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max
+    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, LatentInterface, InterfaceSwitch
     from spn.structure.leaves.spmnLeaves.SPMNLeaf import Utility
     import numpy as np
 
@@ -39,6 +41,12 @@ def get_networkx_obj(spn, feature_labels=None):
         elif isinstance(n, Utility):
             shape = 'd'
             label = "U" + str(n.scope[0])
+        elif isinstance(n, InterfaceSwitch):
+            shape = 'o'
+            label = "IFS"
+        elif isinstance(n, LatentInterface):
+            shape = 'o'
+            label = 'LIF' + str(n.interface_idx)
         else:
             if feature_labels is not None:
                 label = feature_labels[n.scope[0]]

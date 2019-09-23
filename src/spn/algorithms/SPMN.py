@@ -18,10 +18,10 @@ from spn.algorithms.TransformStructure import Prune
 
 class SPMN:
 
-    def __init__(self, partial_order, decision_nodes, utility_node, feature_names,
+    def __init__(self, partial_order, decision_nodes, utility_nodes, feature_names,
                  cluster_by_curr_information_set=False, util_to_bin=False):
 
-        self.params = SPMNParams(partial_order, decision_nodes, utility_node, feature_names, util_to_bin)
+        self.params = SPMNParams(partial_order, decision_nodes, utility_nodes, feature_names, util_to_bin)
         self.op = 'Any'
         self.cluster_by_curr_information_set = cluster_by_curr_information_set
         self.spmn_structure = None
@@ -192,8 +192,6 @@ class SPMN:
                     next_information_set_scope = sorted(list(next_information_set_scope))
                     next_remaining_vars_scope = sorted(list(next_remaining_vars_scope))
 
-
-
                 self.set_next_operation('Sum')
 
                 next_remaining_vars_data = column_slice_data_by_scope(remaining_vars_data,
@@ -303,9 +301,9 @@ class SPMN:
 
 class SPMNParams:
 
-    def __init__(self, partial_order, decision_nodes, utility_node, feature_names, util_to_bin):
+    def __init__(self, partial_order, decision_nodes, utility_nodes, feature_names, util_to_bin):
         self.partial_order = partial_order
         self.decision_nodes = decision_nodes
-        self.utility_node = utility_node
+        self.utility_nodes = utility_nodes
         self.feature_names = feature_names
         self.util_to_bin = util_to_bin

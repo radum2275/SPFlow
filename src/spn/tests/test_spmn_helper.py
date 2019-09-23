@@ -17,13 +17,13 @@ logging.basicConfig(level=logging.DEBUG)
 class TestSPMN(unittest.TestCase):
 
     def setUp(self):
-        feature_names = ['X0', 'X1', 'x2', 'D0', 'X3', 'X4', 'X5', 'D1', 'X6', 'U']
-        partial_order = [['X0', 'X1', 'x2'], ['D0'], ['X3', 'X4', 'X5'], ['D1'], ['X6', 'X7', 'U']]
+        feature_names = ['X0', 'X1', 'X2', 'D0', 'X3', 'X4', 'X5', 'D1', 'X6', 'X7' 'U']
+        partial_order = [['X0', 'X1', 'X2'], ['D0'], ['X3', 'X4', 'X5'], ['D1'], ['X6', 'X7', 'U']]
         decision_nodes = ['D0', 'D1']
-        utility_node = ['U', 'X5']
+        utility_nodes = ['U', 'X5']
         util_to_bin = False
 
-        self.spmn = SPMN(partial_order, decision_nodes, utility_node, feature_names, util_to_bin)
+        self.spmn = SPMN(partial_order, decision_nodes, utility_nodes, feature_names, util_to_bin)
 
         x012_data = np.arange(30).reshape(10, 3)
         d0_data = np.array([[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]]).reshape(10, 1)
