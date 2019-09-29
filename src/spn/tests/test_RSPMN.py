@@ -9,7 +9,7 @@ from SPFlow.src.spn.algorithms.RSPMNHelper import get_partial_order_two_time_ste
     get_nodes_two_time_steps
 
 logging.basicConfig(level=logging.DEBUG)
-
+import numpy as np
 
 class TestRSPMN(unittest.TestCase):
 
@@ -79,6 +79,12 @@ class TestRSPMN(unittest.TestCase):
         utility_nodes_two_time_steps = get_nodes_two_time_steps(self.rspmn.params.utility_nodes)
         req_utility_nodes_two_time_steps = ['UT0', 'X5T0', 'UT1', 'X5T1']
         self.assertListEqual(req_utility_nodes_two_time_steps, utility_nodes_two_time_steps)
+
+    def test_eval_rspmn_bottom_up(self, data):
+
+        data = np.range(0, 330).reshape(-1, 33)
+
+        self.rspmn.eval_rspmn_bottom_up(data)
 
 
 
