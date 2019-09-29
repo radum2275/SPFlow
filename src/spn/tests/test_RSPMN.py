@@ -84,7 +84,7 @@ class TestRSPMN(unittest.TestCase):
 
         data = np.range(0, 330).reshape(-1, 33)
 
-        self.rspmn.eval_rspmn_bottom_up(data)
+        # self.rspmn.eval_rspmn_bottom_up(data)
 
 
 

@@ -8,9 +8,14 @@ import numpy as np
 
 from spn.structure.leaves.spmnLeaves.Inference import utility_value
 
+from spn.structure.leaves.spmnLeaves.Inference import latent_interface_likelihood
+
+from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
+
 
 def utility_mode(node):
     return histogram_mode(node)
+
 
 def utility_bottom_up_uVal(node, data=None, dtype=np.float64):
     uVal = utility_value(node, data=data, dtype=dtype)
@@ -20,9 +25,36 @@ def utility_bottom_up_uVal(node, data=None, dtype=np.float64):
 
     return uVal
 
+
 def utility_top_down(node, input_vals, lls_per_node, data=None):
     get_mpe_top_down_leaf(node, input_vals, data=data, mode=utility_mode(node))
 
 
 def add_utility_mpe_support():
     add_node_mpe(Utility, utility_bottom_up_uVal, utility_top_down)
+
+
+def latent_interface_mode(node):
+    assert True, f'latent interface node data does not have mode or mpe value. ' \
+        f'data must contain value from corresponding bottom time step interface node'
+    return None
+
+
+def latent_interface_bottom_up_Val(node, data=None, dtype=np.float64):
+
+    inference_val = latent_interface_likelihood(node, data=data, dtype=dtype)
+
+    mpe_ids = np.isnan(data[:, node.interface_idx])
+    n_mpe = np.sum(mpe_ids)
+    assert n_mpe == 0, f'latent interface node data does not have mpe value. ' \
+        f'data must contain value from corresponding bottom time step interface node'
+
+    return inference_val
+
+
+def latent_interface_top_down(node, input_vals, lls_per_node, data=None):
+    get_mpe_top_down_leaf(node, input_vals, data=data, mode=latent_interface_mode(node))
+
+
+def add_latent_interface_mpe_support():
+    add_node_mpe(LatentInterface, latent_interface_bottom_up_Val, latent_interface_top_down)
