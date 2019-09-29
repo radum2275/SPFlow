@@ -10,14 +10,14 @@ from networkx.drawing.nx_agraph import graphviz_layout
 # matplotlib.use('Agg')
 import logging
 
-
+from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 
 logger = logging.getLogger(__name__)
 
 
 def get_networkx_obj(spn, feature_labels=None):
     import networkx as nx
-    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, LatentInterface, InterfaceSwitch
+    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, InterfaceSwitch
     from spn.structure.leaves.spmnLeaves.SPMNLeaf import Utility
     import numpy as np
 
