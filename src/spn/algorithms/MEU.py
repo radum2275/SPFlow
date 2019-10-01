@@ -44,11 +44,18 @@ def meu_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
 
     parent_result = merge_input_vals(parent_result)
 
+    # assert data is not None, "data must be passed through to max nodes for proper evaluation."
+    decision_value_given = data[parent_result, node.dec_idx]
+
     w_children_log_probs = np.zeros((len(parent_result), len(node.dec_values)))
     for i, c in enumerate(node.children):
         w_children_log_probs[:, i] = lls_per_node[parent_result, c.id]
+        decision_value_given[decision_value_given==node.dec_values[i]] = i
 
-    max_child_branches = np.argmax(w_children_log_probs, axis=1)
+    max_value = np.argmax(w_children_log_probs, axis=1)
+    # if data contains a decision value use that otherwise use max
+    max_child_branches = np.select([np.isnan(decision_value_given), True],
+                                   [max_value, decision_value_given]).astype(int)
     dec_value = node.dec_values[max_child_branches]
 
     children_row_ids = {}
