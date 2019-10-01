@@ -3,6 +3,8 @@ import numpy as np
 
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 
+from spn.structure.Base import Max
+
 
 def eval_template_top_down(root, eval_functions, all_results=None, parent_result=None, **args):
     """
@@ -29,12 +31,20 @@ def eval_template_top_down(root, eval_functions, all_results=None, parent_result
     all_results[root] = [parent_result]
     latent_interface_dict = {}
 
+    all_max_nodes = []
+    all_decisions = []
     for layer in reversed(get_topological_order_layers(root)):
         for n in layer:
             func = n.__class__._eval_func[-1]
 
             param = all_results[n]
-            result = func(n, param, **args)
+
+            if type(n) == Max:
+                result, decision_values, max_nodes = func(n, param, **args)
+                all_decisions.append(decision_values)
+                all_max_nodes.append(max_nodes)
+            else:
+                result = func(n, param, **args)
 
             row_ids = np.concatenate(param)
             if len(row_ids) > 0:
