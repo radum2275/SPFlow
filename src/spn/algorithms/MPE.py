@@ -37,6 +37,7 @@ def mpe_sum(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
 
     parent_result = merge_input_vals(parent_result)
 
+    # logging.debug(f'sum node {node}')
     w_children_log_probs = np.zeros((len(parent_result), len(node.weights)))
     for i, c in enumerate(node.children):
         w_children_log_probs[:, i] = lls_per_node[parent_result, c.id] + np.log(node.weights[i])
@@ -55,13 +56,17 @@ def mpe_interface_switch(node, parent_result, data=None, lls_per_node=None):
     if len(parent_result) == 0:
         return None
 
+    logging.debug(f'in function mpe_interface_switch()')
     parent_result = merge_input_vals(parent_result)
     children_row_ids = {}
     interface_winner = node.interface_winner
+    logging.debug(f'interface_winner {interface_winner}')
 
     for i, c in enumerate(node.children):
+        logging.debug(f'child {i}')
         children_row_ids[c] = parent_result[interface_winner == i]
 
+    logging.debug(f'children_row_ids {children_row_ids}')
     return children_row_ids
 
 
