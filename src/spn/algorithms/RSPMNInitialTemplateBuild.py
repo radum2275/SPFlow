@@ -13,6 +13,8 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 
 from spn.structure.Base import rebuild_scopes_bottom_up
 
+from spn.structure.Base import Max
+
 
 class RSPMNInitialTemplate:
 
@@ -191,8 +193,8 @@ class RSPMNInitialTemplate:
                 if all(isinstance(child, Leaf) for child in node.children):
 
                     # since we never add these in queue
-                    for leaf_node in node.children:
-                        leaf_node.scope = [leaf_node.scope[0] - num_features_in_one_time_step]
+                    # for leaf_node in node.children:
+                    #     leaf_node.scope = [leaf_node.scope[0] - num_features_in_one_time_step]
 
                     initial_interface_weights = [1/len(latent_interface_list)] * len(latent_interface_list)
                     interface_sum = Sum(children=latent_interface_list, weights=initial_interface_weights)
@@ -213,17 +215,56 @@ class RSPMNInitialTemplate:
                             seen.add(child)
                             queue.append(child)
 
+            # else:
+            #     logging.debug(f'leaf node type at interface layer {type(node)}')
+            #     logging.debug(f'leaf node type scope at interface layer {node.scope}')
+            #     # if it is leaf node, change scope to correspond to number of variables in a single time step
+            #     node.scope = [node.scope[0] - num_features_in_one_time_step]
+            #     logging.debug(f'leaf node type modified scope at interface layer {node.scope}')
+
+        interface_switch = self.change_time_step_1_scopes_to_template_scopes(interface_switch)
+        assign_ids(interface_switch)
+        rebuild_scopes_bottom_up(interface_switch)
+        logging.debug(f'interface_switch.scope {interface_switch.scope}')
+        return interface_switch
+
+    def change_time_step_1_scopes_to_template_scopes(self, interface_switch):
+
+        logging.debug(f'in method change_time_step_1_scopes_to_template_scopes()')
+
+        num_features_in_one_time_step = int(len(self.two_time_step_params.feature_names_two_time_steps) / 2)
+
+        seen, queue = set([interface_switch]), collections.deque([interface_switch])
+
+        while queue:
+            node = queue.popleft()
+
+            if not isinstance(node, Leaf):
+
+                for child in node.children:
+                    if child not in seen:
+                        seen.add(child)
+                        queue.append(child)
+
+                if isinstance(node, Max):
+                    node.dec_idx = node.dec_idx - num_features_in_one_time_step
+
             else:
                 logging.debug(f'leaf node type at interface layer {type(node)}')
                 logging.debug(f'leaf node type scope at interface layer {node.scope}')
+
                 # if it is leaf node, change scope to correspond to number of variables in a single time step
                 node.scope = [node.scope[0] - num_features_in_one_time_step]
+
                 logging.debug(f'leaf node type modified scope at interface layer {node.scope}')
 
         assign_ids(interface_switch)
         rebuild_scopes_bottom_up(interface_switch)
         logging.debug(f'interface_switch.scope {interface_switch.scope}')
+
         return interface_switch
+
+
 
     def learn_spmn_two_time_steps(self, data):
         """
