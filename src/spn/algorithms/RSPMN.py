@@ -17,6 +17,11 @@ import numpy as np
 from spn.algorithms.MPE import get_node_funtions
 from spn.algorithms.RSPMNUtil import eval_template_top_down
 
+from spn.algorithms.MEU import meu_max
+from spn.structure.Base import Max
+
+from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
+
 
 class RSPMN:
 
@@ -48,6 +53,7 @@ class RSPMN:
             # # print("Evaluating rspn and collecting nodes to update")
 
             unrolled_network_lls_per_node = self.eval_rspmn_bottom_up(data)
+            unrolled_network_lls_per_node = self.eval_rspmn_top_down(data, unrolled_network_lls_per_node)
 
     def eval_rspmn_bottom_up(self, data):
 
@@ -63,11 +69,11 @@ class RSPMN:
         logging.debug(f'intial_num_latent_interface_nodes {initial_num_latent_interface_nodes}')
         logging.debug(f'total_num_of_time_steps {total_num_of_time_steps}')
 
-        nodes = get_nodes_by_type(self.InitialTemplate.template_network)
+        template_nodes = get_nodes_by_type(self.InitialTemplate.template_network)
         self.template = self.InitialTemplate.template_network
 
         # for bottom most time step
-        lls_per_node = np.zeros((data.shape[0], len(nodes)))
+        lls_per_node = np.zeros((data.shape[0], len(template_nodes)))
         unrolled_network_lls_per_node = [lls_per_node]
 
         # evaluate template bottom up at each time step
@@ -86,10 +92,14 @@ class RSPMN:
                                                                                          bottom_up=True)
 
             if time_step_num_in_reverse_order == 0:
+
+                top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
+                lls_per_node = np.zeros((data.shape[0], len(top_nodes)))
                 log_likelihood(self.InitialTemplate.top_network, each_time_step_data_for_template,
                                lls_matrix=lls_per_node)
 
             else:
+                lls_per_node = np.zeros((data.shape[0], len(template_nodes)))
                 log_likelihood(self.template, each_time_step_data_for_template, lls_matrix=lls_per_node)
 
             unrolled_network_lls_per_node.append(lls_per_node)
@@ -100,12 +110,19 @@ class RSPMN:
 
     def eval_rspmn_top_down(self, data, unrolled_network_lls_per_node):
 
+        logging.debug(f'in method eval_rspmn_top_down()')
+
         num_variables_each_time_step = len(self.params.feature_names)
         total_num_of_time_steps = int(data.shape[1] / num_variables_each_time_step)
         initial_num_latent_interface_nodes = len(self.InitialTemplate.template_network.children)
 
-        for time_step_num in range(total_num_of_time_steps):
-            lls_per_node = unrolled_network_lls_per_node[time_step_num]
+        node_functions = get_node_funtions()
+        _node_functions_top_down = node_functions[0].copy()
+        _node_functions_top_down.update({Max: meu_max})
+        logging.debug(f'_node_functions_top_down {_node_functions_top_down}')
+
+        for time_step_num in range(total_num_of_time_steps-1):
+            lls_per_node = unrolled_network_lls_per_node[total_num_of_time_steps-time_step_num]
 
             each_time_step_data_for_template = self.get_each_time_step_data_for_template(data, time_step_num,
                                                                                          total_num_of_time_steps,
@@ -113,17 +130,32 @@ class RSPMN:
                                                                                          initial_num_latent_interface_nodes,
                                                                                          num_variables_each_time_step,
                                                                                          bottom_up=False)
+            instance_ids = np.arange(each_time_step_data_for_template.shape[0])
+            if time_step_num == 0:
+                all_results, latent_interface_dict = eval_template_top_down(self.InitialTemplate.top_network,
+                                                                            eval_functions=_node_functions_top_down,
+                                                                            all_results=None, parent_result=instance_ids,
+                                                                            data=each_time_step_data_for_template,
+                                                                            lls_per_node=lls_per_node)
 
-            node_functions = get_node_funtions()
-            all_results, latent_interface_dict = eval_template_top_down(self.template,
-                                                                        eval_functions=node_functions,
-                                                                        all_results=None, parent_result=None,
-                                                                        data=each_time_step_data_for_template,
-                                                                        lls_per_node=lls_per_node)
+            else:
 
-        for latent_interface_node, instances in latent_interface_dict.items():
-            self.template.interface_winner[instances] = latent_interface_node.interface_idx - \
-                                                        len(self.template.children)
+                all_results, latent_interface_dict = eval_template_top_down(self.template,
+                                                                            eval_functions=_node_functions_top_down,
+                                                                            all_results=None, parent_result=instance_ids,
+                                                                            data=each_time_step_data_for_template,
+                                                                            lls_per_node=lls_per_node)
+            self.template.interface_winner = np.full((each_time_step_data_for_template.shape[0],), np.inf)
+            logging.debug(f'latent_interface_dict {latent_interface_dict}')
+            for latent_interface_node, instances in latent_interface_dict.items():
+                self.template.interface_winner[instances] = latent_interface_node.interface_idx - \
+                                                            num_variables_each_time_step
+
+            # if self.template.interface_winner.any(np.inf):
+            #     raise Exception(f'All instances are not passed to the corresponding latent interface nodes')
+
+
+        self.update_weights()
 
         return unrolled_network_lls_per_node
 
@@ -154,6 +186,25 @@ class RSPMN:
         each_time_step_data_for_template = np.concatenate((each_time_step_data, latent_node_data), axis=1)
 
         return each_time_step_data_for_template
+
+    def update_weights(self):
+
+        nodes = get_nodes_by_type(self.InitialTemplate.template_network)
+
+        for node in nodes:
+
+            if isinstance(node, Sum):
+
+                if all(isinstance(child, LatentInterface) for child in node.children):
+
+                    for i, child in enumerate(node.children):
+                        node.weights[i] = (node.children[i].count/node.count)
+
+                    node.weights = (np.array(node.weights)/np.sum(node.weights)).tolist()
+
+                    print(node.weights)
+
+            print(f'node {node}, count {node.count}')
 
 
 class RSPMNParams:
