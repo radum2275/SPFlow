@@ -50,13 +50,20 @@ def meu_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     w_children_log_probs = np.zeros((len(parent_result), len(node.dec_values)))
     for i, c in enumerate(node.children):
         w_children_log_probs[:, i] = lls_per_node[parent_result, c.id]
-        decision_value_given[decision_value_given==node.dec_values[i]] = i
+        decision_value_given[decision_value_given == node.dec_values[i]] = i
+
+    # Decisions given are not in the set of decisions the node holds.
+    # Use max value
+    # decision_value_given[decision_value_given >= len(node.dec_values)] = np.nan
 
     max_value = np.argmax(w_children_log_probs, axis=1)
     # if data contains a decision value use that otherwise use max
     max_child_branches = np.select([np.isnan(decision_value_given), True],
                                    [max_value, decision_value_given]).astype(int)
-    dec_value = node.dec_values[max_child_branches]
+    dec_branches = max_child_branches[max_child_branches < len(node.dec_values)]
+    dec_value = np.full((len(max_child_branches)), -1)
+
+    dec_value[dec_branches] = node.dec_values[dec_branches]
 
     children_row_ids = {}
 
