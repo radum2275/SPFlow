@@ -36,11 +36,21 @@ def get_networkx_obj(spn, feature_labels=None):
             label = "x"
             shape = 'o'
         elif isinstance(n, Max):
-            label = n.feature_name[0] + n.feature_name[1] + "D" + str(n.id)
-            shape = 's'
+            if feature_labels is not None:
+                label = feature_labels[n.dec_idx]
+                shape = 's'
+            else:
+                label = n.feature_name[0] + n.feature_name[1] + "D" + str(n.id)
+                shape = 's'
+
         elif isinstance(n, Utility):
-            shape = 'd'
-            label = "U" + str(n.scope[0])
+            if feature_labels is not None:
+                label = feature_labels[n.scope[0]]
+                shape = 'd'
+            else:
+                shape = 'd'
+                label = "U" + str(n.scope[0])
+
         elif isinstance(n, InterfaceSwitch):
             shape = 'o'
             label = "IFS"
@@ -49,7 +59,7 @@ def get_networkx_obj(spn, feature_labels=None):
             label = 'LIF' + str(n.interface_idx)
         else:
             if feature_labels is not None:
-                label = feature_labels[n.scope[0]]
+                label = feature_labels[n.scope[0]] 
                 shape = 'o'
             else:
                 label = "V" + str(n.scope[0])
