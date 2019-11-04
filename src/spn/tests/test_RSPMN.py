@@ -1,11 +1,10 @@
-import sys
-
-
-sys.path.append('/home/hari/Desktop/Projects/Thesis_Project/SPFlow_clone/SPFlow/src/')
+# import sys
+# sys.path.append('/home/hari/Desktop/Projects/Thesis_Project/SPFlow_clone/SPFlow/src')
+# print(f'sys.path {sys.path}')
 import unittest
 import logging
-from SPFlow.src.spn.algorithms.RSPMN import RSPMN
-from SPFlow.src.spn.algorithms.RSPMNHelper import get_partial_order_two_time_steps, get_feature_names_two_time_steps,\
+from spn.algorithms.RSPMN import RSPMN
+from spn.algorithms.RSPMNHelper import get_partial_order_two_time_steps, get_feature_names_two_time_steps,\
     get_nodes_two_time_steps
 
 logging.basicConfig(level=logging.DEBUG)
@@ -86,6 +85,14 @@ class TestRSPMN(unittest.TestCase):
 
         # self.rspmn.eval_rspmn_bottom_up(data)
 
+    def test_wrap_sequence_into_two_time_steps(self):
+
+        data = np.arange(0, 550).reshape(-1, 55)
+        print(data)
+        two_time_step_data = \
+            self.rspmn.InitialTemplate.wrap_sequence_into_two_time_steps(data)
+
+        print(f'two_time_step_data {two_time_step_data}')
 
 
 
