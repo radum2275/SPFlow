@@ -10,12 +10,14 @@ from networkx.drawing.nx_agraph import graphviz_layout
 # matplotlib.use('Agg')
 import logging
 
+from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
+
 logger = logging.getLogger(__name__)
 
 
 def get_networkx_obj(spn, feature_labels=None):
     import networkx as nx
-    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max
+    from spn.structure.Base import Sum, Product, Leaf, get_nodes_by_type, Max, InterfaceSwitch
     from spn.structure.leaves.spmnLeaves.SPMNLeaf import Utility
     import numpy as np
 
@@ -34,20 +36,34 @@ def get_networkx_obj(spn, feature_labels=None):
             label = "x"
             shape = 'o'
         elif isinstance(n, Max):
-            label = n.feature_name[0] + n.feature_name[1] + "D" + str(n.id)
-            shape = 's'
+            if feature_labels is not None:
+                label = feature_labels[n.dec_idx]
+                shape = 's'
+            else:
+                label = n.feature_name[0] + n.feature_name[1] + "D" + str(n.id)
+                shape = 's'
+
         elif isinstance(n, Utility):
-            shape = 'd'
-            label = "U" + str(n.scope[0])
-        else:
             if feature_labels is not None:
                 label = feature_labels[n.scope[0]]
+                shape = 'd'
+            else:
+                shape = 'd'
+                label = "U" + str(n.scope[0])
+
+        elif isinstance(n, InterfaceSwitch):
+            shape = 'o'
+            label = "IFS"
+        elif isinstance(n, LatentInterface):
+            shape = 'o'
+            label = 'LIF' + str(n.interface_idx)
+        else:
+            if feature_labels is not None:
+                label = feature_labels[n.scope[0]] 
                 shape = 'o'
             else:
                 label = "V" + str(n.scope[0])
                 shape = 'o'
-
-
 
         g.add_node(n.id, s=shape)
         labels[n.id] = label

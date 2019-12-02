@@ -13,6 +13,13 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import Utility
 import numpy as np
 
 
+from collections import defaultdict
+import collections
+
+
+def merge_input_vals(l):
+    return np.concatenate(l)
+
 def meu_sum(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
     meu_children = meu_per_node[:,[child.id for child in node.children]]
     likelihood_children = lls_per_node[:,[child.id for child in node.children]]

@@ -15,6 +15,7 @@ class Node(object):
     def __init__(self):
         self.id = 0
         self.scope = []
+        self.count = 1
 
     @property
     def name(self):
@@ -113,7 +114,7 @@ class Leaf(Node):
 
 
 class Max(Node):
-    def __init__(self, dec_idx=None, dec_values=None, children=None, feature_name = None):
+    def __init__(self, dec_idx=None, dec_values=None, children=None, feature_name=None):
         Node.__init__(self)
 
         self.dec_idx = dec_idx
@@ -130,6 +131,27 @@ class Max(Node):
             children = []
         self.children = children
 
+
+# class LatentInterface(Leaf):
+#     def __init__(self, interface_idx, bin_val=0, scope=None):
+#         Leaf.__init__(self, scope=scope)
+#
+#         self.interface_idx = interface_idx
+#         self.bin_val = bin_val      # 1 if data passes through corresponding interface node
+#         self.bottom_up_val = None   # likelihood or meu value of the corresponding interface node in the next time step
+
+
+class InterfaceSwitch(Node):
+    def __init__(self, interface_winner=None, children=None):
+        Node.__init__(self)
+
+        self.interface_winner = interface_winner
+
+        if children is None:
+            children = []
+        else:
+            self.scope = children[0].scope  # all children have same cope.
+        self.children = children
 
 class Context:
     def __init__(self, meta_types=None, domains=None, parametric_types=None, scope=None, feature_names=None):

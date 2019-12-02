@@ -9,6 +9,8 @@ from scipy.special import logsumexp
 
 from spn.structure.Base import Product, Sum, eval_spn_bottom_up, Max
 
+from spn.structure.Base import InterfaceSwitch
+
 logger = logging.getLogger(__name__)
 
 EPSILON = np.finfo(float).eps
@@ -40,13 +42,10 @@ def prod_likelihood(node, children, data=None, dtype=np.float64):
 
 
 def max_log_likelihood(node, children, data=None, dtype=np.float64):
-
     llchildren = np.concatenate(children, axis=1)
     assert llchildren.dtype == dtype
-
-    if llchildren.shape[1] == 1:    # if only one child, then it is max.
+    if llchildren.shape[1] == 1:  # if only one child, then it is max.
         return llchildren
-
     assert data is not None, "data must be passed through to max nodes for proper evaluation."
     decision_value_given = data[:, node.dec_idx]
     max_value = np.argmax(llchildren, axis=1)
@@ -54,6 +53,7 @@ def max_log_likelihood(node, children, data=None, dtype=np.float64):
     mapd = {node.dec_values[i]:i for i in range(len(node.dec_values))}
     for k, v in mapd.items(): d_given[decision_value_given==k] = v
     # if data contains a decision value use that otherwise use max
+    
     child_idx = np.select([np.isnan(d_given), True],
                           [max_value, d_given]).astype(int)
 
@@ -101,8 +101,15 @@ def sum_likelihood(node, children, data=None, dtype=np.float64):
 
     return np.dot(llchildren, b).reshape(-1, 1)
 
+def interface_switch_log_likelihood(node, children, data=None, dtype=np.float64):
+    llchildren = np.concatenate(children, axis=1)
+    assert llchildren.dtype == dtype
+    # print("node and llchildren", (node, llchildren))
+    mll = np.max(llchildren, axis=1).reshape(-1, 1)
+    return mll
 
-_node_log_likelihood = {Sum: sum_log_likelihood, Product: prod_log_likelihood, Max: max_log_likelihood}
+
+_node_log_likelihood = {Sum: sum_log_likelihood, Product: prod_log_likelihood, Max: max_log_likelihood, InterfaceSwitch: interface_switch_log_likelihood}
 _node_likelihood = {Sum: sum_likelihood, Product: prod_likelihood, Max: max_likelihood}
 
 

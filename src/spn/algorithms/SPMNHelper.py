@@ -31,6 +31,34 @@ def get_ds_context(data, scope, params):
             feature_names=scope_var
         )
     ds_context.add_domains(data)
+# =======
+#     # if parametric, all variables are type -- categorical
+#     if params.util_to_bin:
+#         context = [Categorical] * num_of_variables
+#         ds_context = Context(parametric_types=context, scope=scope,
+    #         feature_names=scope_var).add_domains(data)
+#
+#     # if mixed, utility is meta type -- UTILITY
+#     else:
+#
+#         context = [MetaType.DISCRETE] * num_of_variables
+#
+#         utility_indices = [utility_index for utility_index,
+    #         var in enumerate(scope_var)
+#                            for utility_var in params.utility_nodes
+#                            if utility_var == var]
+#
+#         # update context for utility variables with MetaType.UTILITY
+#         if len(utility_indices) > 0:
+#             for utility_index in utility_indices:
+#                 context[utility_index] = MetaType.UTILITY
+#
+#         logging.debug(f'context is {context}')
+#         scope = scope
+#         ds_context = Context(meta_types=context, scope=scope,
+    #         feature_names=scope_var).add_domains(data)
+#
+# >>>>>>> rspmn
     return ds_context
 
 
