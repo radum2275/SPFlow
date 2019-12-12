@@ -45,3 +45,8 @@ def get_nodes_two_time_steps(nodes_list):
 
     return nodes_two_time_steps
 
+
+def get_meta_types_two_time_steps(meta_types):
+
+    meta_types_two_time_steps = meta_types + meta_types
+    return meta_types_two_time_steps

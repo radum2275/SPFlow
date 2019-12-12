@@ -1,3 +1,5 @@
+from scipy.special import logsumexp
+
 from spn.structure.Base import get_topological_order_layers, Leaf
 import numpy as np
 
@@ -6,7 +8,7 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 from spn.structure.Base import Max
 
 
-def eval_template_top_down(root, eval_functions, all_results=None, parent_result=None, **args):
+def eval_template_top_down(root, eval_functions, *aargs, all_results=None, parent_result=None, **args):
     """
     evaluates an spn top to down
 
@@ -39,18 +41,24 @@ def eval_template_top_down(root, eval_functions, all_results=None, parent_result
 
             param = all_results[n]
 
-            if type(n) == Max:
-                result, decision_values, max_nodes = func(n, param, **args)
-                all_decisions.append(decision_values)
-                all_max_nodes.append(max_nodes)
-            else:
-                result = func(n, param, **args)
+            # if type(n) == Max:
+            #     result, decision_values, max_nodes = func(n, param, **args)
+            #     all_decisions.append(decision_values)
+            #     all_max_nodes.append(max_nodes)
+            # else:
+            result = func(n, param, **args)
 
-            row_ids = np.concatenate(param)
-            if len(row_ids) > 0:
-                n.count = n.count + len(row_ids)
+            if aargs[0]:
                 if type(n) == LatentInterface:
-                    latent_interface_dict[n] = row_ids
+                    top_down_pass_val=logsumexp(np.concatenate(param).reshape(-1, 1),
+                              axis=1)
+                    latent_interface_dict[n] = top_down_pass_val
+            else:
+                top_down_pass_val = np.concatenate(param)
+                if len(top_down_pass_val) > 0:
+                    n.count = n.count + len(top_down_pass_val)
+                    if type(n) == LatentInterface:
+                        latent_interface_dict[n] = top_down_pass_val
 
             if result is not None and not isinstance(n, Leaf):
                 assert isinstance(result, dict)
@@ -66,3 +74,86 @@ def eval_template_top_down(root, eval_functions, all_results=None, parent_result
             delattr(node_type, "_eval_func")
 
     return all_results[root], latent_interface_dict
+
+
+def gradient_backward(spn, lls_per_node, node_gradients=None, data=None):
+    gradient_result = np.zeros_like(lls_per_node)
+    soft_em = True
+
+    all_results, latent_interface_dict = eval_template_top_down(
+        spn,
+        node_gradients, soft_em,
+        parent_result=np.zeros((lls_per_node.shape[0])),
+        gradient_result=gradient_result,
+        lls_per_node=lls_per_node,
+        data=data
+    )
+
+    return gradient_result, latent_interface_dict
+
+
+
+
+
+
+# def mpe_interface_sum(self, node, parent_result, data=None, lls_per_node=None,
+    #             rand_gen=None):
+    #     if parent_result is None:
+    #         return None
+    #
+    #     parent_result = np.concatenate(parent_result)
+    #
+    #     # logging.debug(f'sum node {node}')
+    #     if all(isinstance(child, LatentInterface) for child in
+    #            node.children):
+    #
+    #         w_children_log_probs = np.zeros(
+    #             (len(parent_result), len(node.weights)))
+    #         for i, c in enumerate(node.children):
+    #             w_children_log_probs[:, i] = \
+    #                 lls_per_node[parent_result, c.id] + np.log(node.weights[i])
+    #
+    #         print(f'w_children_log_probs {w_children_log_probs}')
+    #         # max_child_branches = np.argmax(w_children_log_probs, axis=1)
+    #
+    #         print(f'data {data}')
+    #         interface_idx = self.mpe_for_latent_interface_from_top_network(data[parent_result])
+    #         max_child_branches = interface_idx[~np.isnan(interface_idx)]
+    #         max_child_branches = max_child_branches - len(self.params.feature_names)
+    #         print(f'max_child_branches {max_child_branches}')
+    #         children_row_ids = {}
+    #
+    #         for i, c in enumerate(node.children):
+    #             children_row_ids[c] = parent_result[max_child_branches == i]
+    #
+    #     else:
+    #         w_children_log_probs = np.zeros(
+    #             (len(parent_result), len(node.weights)))
+    #         for i, c in enumerate(node.children):
+    #             w_children_log_probs[:, i] = lls_per_node[
+    #                                              parent_result, c.id] + np.log(
+    #                 node.weights[i])
+    #
+    #         max_child_branches = np.argmax(w_children_log_probs, axis=1)
+    #
+    #         children_row_ids = {}
+    #
+    #         for i, c in enumerate(node.children):
+    #             children_row_ids[c] = parent_result[max_child_branches == i]
+    #
+    #     return children_row_ids
+    #
+    # def mpe_for_latent_interface_from_top_network(self, data):
+    #
+    #     mpe_data = data[:, 0:len(self.params.feature_names)].copy()
+    #     rows = data.shape[0]
+    #     columns = data.shape[1] - len(self.params.feature_names)
+    #     nan_data = np.full((rows, columns), np.nan)
+    #     print(f'nan_data shape {nan_data.shape}')
+    #     print(f'mpe_data shape {mpe_data.shape}')
+    #     mpe_data = np.column_stack((mpe_data, nan_data))
+    #     mpe_data = mpe(self.InitialTemplate.top_network, mpe_data)
+    #     print(f'mpe data {mpe_data[0:10]}')
+    #     interface_idx = mpe_data[:, len(self.params.feature_names):]
+    #     print(f'interface_idx[0:100] {interface_idx[0:10]}')
+    #     return interface_idx

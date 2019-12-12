@@ -8,7 +8,7 @@ from spn.algorithms.SPMN import SPMN, SPMNParams
 
 from spn.algorithms.RSPMNHelper import get_partial_order_two_time_steps, \
     get_feature_names_two_time_steps \
-    , get_nodes_two_time_steps
+    , get_nodes_two_time_steps, get_meta_types_two_time_steps
 
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 
@@ -352,6 +352,7 @@ class RSPMNInitialTemplate:
                     self.two_time_step_params.decision_nodes_two_time_steps,
                     self.two_time_step_params.utility_nodes_two_time_steps,
                     self.two_time_step_params.feature_names_two_time_steps,
+                    self.two_time_step_params.meta_types_two_time_steps,
                     cluster_by_curr_information_set=True,
                     util_to_bin=False)
 
@@ -414,4 +415,7 @@ class RSPMNTwoTimeStepParams:
             rspmn_params.utility_nodes)
         self.feature_names_two_time_steps = get_feature_names_two_time_steps(
             self.partial_order_two_time_steps)
+        self.meta_types_two_time_steps = get_meta_types_two_time_steps(
+            rspmn_params.meta_types
+        )
         self.length_of_each_time_slice = rspmn_params.length_of_time_slice
