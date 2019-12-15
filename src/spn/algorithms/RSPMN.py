@@ -328,7 +328,7 @@ class RSPMN:
                                                                      data)
 
         latent_queue = collections.deque()
-        for time_step_num in range(total_num_of_time_steps - 1):
+        for time_step_num in range(total_num_of_time_steps):
             lls_per_node = unrolled_network_lls_per_node[
                 total_num_of_time_steps - time_step_num
                 ]
