@@ -3,6 +3,7 @@ Created on July 02, 2018
 
 @author: Alejandro Molina
 """
+
 from spn.algorithms.Inference import log_likelihood, sum_log_likelihood, \
     prod_log_likelihood, max_log_likelihood
 from spn.algorithms.Validity import is_valid
@@ -51,6 +52,44 @@ def mpe_sum(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
 
     for i, c in enumerate(node.children):
         children_row_ids[c] = parent_result[max_child_branches == i]
+
+    return children_row_ids
+
+def mpe_max_other(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+    if parent_result is None:
+        return None
+
+    parent_result = merge_input_vals(parent_result)
+
+    children_row_ids = {}
+
+    children_log_probs = np.zeros((len(parent_result), len(node.children)))
+    for i, c in enumerate(node.children):
+        children_log_probs[:, i] = lls_per_node[parent_result, c.id]
+
+    max_child_branches = np.argmax(children_log_probs, axis=1)
+
+    assert data is not None, "data must be passed through to max nodes for proper evaluation."
+    given_decision = data[parent_result, node.dec_idx]
+
+    children_row_ids = {}
+
+    for i, c in enumerate(node.children):
+        max_and_no_selection = np.concatenate(
+                (
+                    np.isnan(given_decision).reshape(-1,1),
+                    (max_child_branches == i).reshape(-1,1)
+                ),
+                axis=1
+            ).all(axis=1).reshape(-1,1)
+        max_or_selected = np.concatenate(
+                (
+                    max_and_no_selection.reshape(-1,1),
+                    (given_decision==i).reshape(-1,1)
+                ),
+                axis=1
+            ).any(axis=1).reshape(-1)
+        children_row_ids[c] = parent_result[max_or_selected]
 
     return children_row_ids
 
@@ -172,8 +211,10 @@ _node_bottom_up_mpe = {}
 _node_bottom_up_mpe_log = {Sum: sum_log_likelihood, Product: prod_log_likelihood,
                            Max: max_log_likelihood}
 
+
 def get_node_funtions():
     return [_node_top_down_mpe, _node_bottom_up_mpe]
+
 
 def log_node_bottom_up_mpe(node, *args, **kwargs):
     probs = _node_bottom_up_mpe[type(node)](node, *args, **kwargs)
