@@ -29,6 +29,8 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 
 from spn.algorithms.Gradient import get_node_gradients
 
+from spn.algorithms.MEU import meu
+
 
 class RSPMN:
 
@@ -79,7 +81,7 @@ class RSPMN:
             # # print("Evaluating rspn and collecting nodes to update")
 
             unrolled_network_lls_per_node = self.eval_rspmn_bottom_up(
-                self.template, data
+                self.template, data, True
             )
             self.eval_rspmn_top_down(
                 self.template, data, unrolled_network_lls_per_node,
@@ -88,7 +90,7 @@ class RSPMN:
 
         self.update_weights(self.template)
 
-    def eval_rspmn_bottom_up(self, template, data):
+    def eval_rspmn_bottom_up(self, template, data, *args):
 
         # assert self.InitialTemplate.top_network is not None,
         # f'top layer does not exist'
@@ -138,14 +140,33 @@ class RSPMN:
 
                 top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
                 eval_val_per_node = np.zeros((data.shape[0], len(top_nodes)))
-                log_likelihood(self.InitialTemplate.top_network,
-                               each_time_step_data_for_template,
-                               lls_matrix=eval_val_per_node)
+                if args[0]:
+                    log_likelihood(self.InitialTemplate.top_network,
+                                   each_time_step_data_for_template,
+                                   lls_matrix=eval_val_per_node)
+
+                else:
+                    result, meu_matrix = meu(self.InitialTemplate.top_network,
+                        each_time_step_data_for_template,
+                        meu_matrix=eval_val_per_node)
+
+                    eval_val_per_node = meu_matrix
+                    print(f'eval_val_per_node {eval_val_per_node}')
+                    #print(f'meu_matrix {meu_matrix}')
 
             else:
                 eval_val_per_node = np.zeros((data.shape[0], len(template_nodes)))
-                log_likelihood(template, each_time_step_data_for_template,
-                               lls_matrix=eval_val_per_node)
+                if args[0]:
+                    log_likelihood(template, each_time_step_data_for_template,
+                                   lls_matrix=eval_val_per_node)
+                    
+                else:
+                    result, meu_matrix = meu(template,
+                        each_time_step_data_for_template,
+                        meu_matrix=eval_val_per_node)
+
+                    eval_val_per_node = meu_matrix
+                    print(f'eval_val_per_node {eval_val_per_node}')
 
             unrolled_network_eval_val_per_node.append(eval_val_per_node)
 
@@ -184,7 +205,7 @@ class RSPMN:
             if time_step_num == 0:
                 all_results, latent_interface_dict = eval_template_top_down(
                     self.InitialTemplate.top_network,
-                    eval_functions=node_functions_top_down,
+                    node_functions_top_down, False,
                     all_results=None, parent_result=instance_ids,
                     data=each_time_step_data_for_template,
                     lls_per_node=lls_per_node)
@@ -193,7 +214,7 @@ class RSPMN:
 
                 all_results, latent_interface_dict = eval_template_top_down(
                     template,
-                    eval_functions=node_functions_top_down,
+                    node_functions_top_down, False,
                     all_results=None, parent_result=instance_ids,
                     data=each_time_step_data_for_template,
                     lls_per_node=lls_per_node
@@ -289,12 +310,20 @@ class RSPMN:
     def log_likelihood(self, template, data):
 
         unrolled_network_lls_per_node = self.eval_rspmn_bottom_up(template,
-                                                                  data)
+                                                                  data, True)
         # ll at root node
         log_likelihood = unrolled_network_lls_per_node[-1][:, 0]
 
         return log_likelihood, unrolled_network_lls_per_node
 
+    def meu(self, template, data):
+
+        unrolled_network_meu_per_node = self.eval_rspmn_bottom_up(template,
+                                                                  data, False)
+        # ll at root node
+        meu = unrolled_network_meu_per_node[-1][:, 0]
+
+        return meu, unrolled_network_meu_per_node
 
     def EM_optimization(self, template, data, iterations=5,
                         skip_validation=False, **kwargs):
@@ -328,7 +357,7 @@ class RSPMN:
                                                                      data)
 
         latent_queue = collections.deque()
-        for time_step_num in range(total_num_of_time_steps):
+        for time_step_num in range(total_num_of_time_steps-1):
             lls_per_node = unrolled_network_lls_per_node[
                 total_num_of_time_steps - time_step_num
                 ]

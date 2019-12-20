@@ -110,7 +110,7 @@ def interface_switch_log_likelihood(node, children, data=None, dtype=np.float64)
 
 
 _node_log_likelihood = {Sum: sum_log_likelihood, Product: prod_log_likelihood, Max: max_log_likelihood, InterfaceSwitch: interface_switch_log_likelihood}
-_node_likelihood = {Sum: sum_likelihood, Product: prod_likelihood, Max: max_likelihood}
+_node_likelihood = {Sum: sum_likelihood, Product: prod_likelihood, Max: max_likelihood, InterfaceSwitch: interface_switch_log_likelihood}
 
 
 def log_node_likelihood(node, *args, **kwargs):
