@@ -1,3 +1,30 @@
+import collections
+import copy
+import logging
+
+from spn.algorithms.EM import get_node_updates_for_EM
+#from spn.algorithms.Gradient import gradient_backward
+from spn.structure.Base import Leaf, Sum, InterfaceSwitch, assign_ids
+
+from spn.algorithms.SPMN import SPMN, SPMNParams
+
+from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
+
+from spn.algorithms.Inference import log_likelihood
+from spn.structure.Base import get_nodes_by_type
+import numpy as np
+
+from spn.algorithms.MPE import get_node_funtions, mpe
+from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, gradient_backward
+
+from spn.algorithms.MEU import meu_max
+from spn.structure.Base import Max
+
+from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
+
+from spn.algorithms.Gradient import get_node_gradients
+
+from spn.algorithms.MEU import meu
 
 
 
@@ -95,38 +122,15 @@ def eval_rspmn_bottom_up(self, template, data, *args):
 
             top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
             eval_val_per_node = np.zeros((data.shape[0], len(top_nodes)))
-            if args[0]:
-                log_likelihood(self.InitialTemplate.top_network,
+
+            log_likelihood(self.InitialTemplate.top_network,
                                each_time_step_data_for_template,
                                lls_matrix=eval_val_per_node)
 
-            else:
-                result, meu_matrix = meu(self.InitialTemplate.top_network,
-                                         each_time_step_data_for_template,
-                                         meu_matrix=eval_val_per_node)
-
-                eval_val_per_node = meu_matrix
-                print(f'eval_val_per_node {eval_val_per_node}')
-                # print(f'meu_matrix {meu_matrix}')
-
         else:
             eval_val_per_node = np.zeros((data.shape[0], len(template_nodes)))
-            if args[0]:
-                log_likelihood(template, each_time_step_data_for_template,
+            log_likelihood(template, each_time_step_data_for_template,
                                lls_matrix=eval_val_per_node)
-
-            else:
-
-                self.pass_meu_val_to_latent_interface_leaf_nodes(
-                    eval_val_per_node, prev_eval_val_per_node,
-                    initial_num_latent_interface_nodes)
-
-                result, meu_matrix = meu(template,
-                                         each_time_step_data_for_template,
-                                         meu_matrix=eval_val_per_node)
-
-                eval_val_per_node = meu_matrix
-                print(f'eval_val_per_node {eval_val_per_node}')
 
         unrolled_network_eval_val_per_node.append(eval_val_per_node)
 

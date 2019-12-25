@@ -38,6 +38,9 @@ def meu_max(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
     decision_value_given = data[:, node.dec_idx]
     max_value = node.dec_values[np.argmax(meu_children, axis=1)]
     # if data contains a decision value use that otherwise use max
+    # if not np.isnan(decision_value_given) and list(decision_value_given) not in node.dec_values:
+    #     meu_per_node[:, node.id] = np.nan
+    # else:
     dec_value = np.select([np.isnan(decision_value_given), True],
                           [max_value, decision_value_given]).astype(int)
     dec_value_to_child_id = lambda val: node.children[list(node.dec_values).index(val)].id
@@ -64,6 +67,7 @@ _node_bottom_up_meu = {Sum: meu_sum, Product: meu_prod, Max: meu_max,
 def meu(root, input_data,
         node_bottom_up_meu=_node_bottom_up_meu,
         meu_matrix=None,
+        lls_matrix=None,
         in_place=False):
     # valid, err = is_valid(node)
     # assert valid, err
@@ -77,13 +81,25 @@ def meu(root, input_data,
         if type(node) is Utility:
             utility_scope.add(node.scope[0])
 
-    print(utility_scope)
+    # print(utility_scope)
     assert np.all(np.isnan(data[:, list(utility_scope)])), "Please specify all utility values as np.nan"
-    likelihood_per_node = np.zeros((data.shape[0], len(nodes)))
-    meu_per_node = np.zeros((data.shape[0], len(nodes)))
-    meu_per_node.fill(np.nan)
+
+    if lls_matrix is not None:
+        likelihood_per_node = lls_matrix
+    else:
+        likelihood_per_node = np.zeros((data.shape[0], len(nodes)))
+
+    if meu_matrix is not None:
+        meu_per_node = meu_matrix
+        meu_per_node[meu_per_node == 0] = np.nan
+    else:
+        meu_per_node = np.zeros((data.shape[0], len(nodes)))
+        meu_per_node.fill(np.nan)
+
+    print(f'data in meu {data[:, 0:18]}')
     # one pass bottom up evaluating the likelihoods
     likelihood(root, data, dtype=data.dtype, lls_matrix=likelihood_per_node)
+    print(f'likelihood_per_node in meu {likelihood_per_node[:, 0:18]}')
     eval_spmn_bottom_up_meu(
             root,
             _node_bottom_up_meu,
@@ -92,11 +108,16 @@ def meu(root, input_data,
             lls_per_node=likelihood_per_node
         )
 
-    if meu_matrix is not None:
-        meu_matrix = meu_per_node
+    # if meu_matrix is not None:
+    #     meu_matrix = meu_per_node
+
+    # print(f'meu matrix in meu befor assignment {meu_matrix}')
+    # meu_matrix = meu_per_node
+    print(f'meu matrix in meu {meu_matrix}')
+    print(f'meu_per_node in meu {meu_per_node[:, 0:18]}')
 
     result = meu_per_node[:,root.id]
-    return result, meu_matrix
+    return result
 
 
 def eval_spmn_bottom_up_meu(root, eval_functions, meu_per_node=None, data=None, lls_per_node=None):
@@ -198,16 +219,16 @@ def best_next_decision(root, input_data, in_place=False):
     for node in nodes:
         if type(node) == Max:
             if node.dec_idx in dec_dict:
-                dec_dict[node.dec_idx].union(set(node.dec_values))
+                    dec_dict[node.dec_idx].union(set(node.dec_values))
             else:
                 dec_dict[node.dec_idx] = set(node.dec_values)
     next_dec_idx = None
     # find next undefined decision
     for idx in dec_dict.keys():
-        if np.all(np.isnan(data[:,idx])):
+        if np.all(np.isnan(data[:, idx])):
             next_dec_idx = idx
             break
-    assert next_dec_idx != None, "please assign all values of next decision to np.nan"
+    assert next_dec_idx is not None, "please assign all values of next decision to np.nan"
     # determine best decisions based on meu
     dec_vals = list(dec_dict[next_dec_idx])
     best_decisions = np.full((1,data.shape[0]),dec_vals[0])
