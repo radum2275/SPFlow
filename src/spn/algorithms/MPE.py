@@ -5,7 +5,7 @@ Created on July 02, 2018
 """
 
 from spn.algorithms.Inference import log_likelihood, sum_log_likelihood, \
-    prod_log_likelihood, max_log_likelihood
+    prod_log_likelihood, max_log_likelihood, sum_likelihood, prod_likelihood, max_likelihood
 from spn.algorithms.Validity import is_valid
 from spn.structure.Base import Product, Sum, InterfaceSwitch, get_nodes_by_type, \
     eval_spn_top_down, Max
@@ -55,7 +55,7 @@ def mpe_sum(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
 
     return children_row_ids
 
-def mpe_max_other(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+def mpe_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     if parent_result is None:
         return None
 
@@ -157,7 +157,7 @@ def get_mpe_top_down_leaf(node, input_vals, data=None, mode=0):
         data[input_vals[data_nans], node.scope] = mode
 
 
-def mpe_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+def mpe_max_1(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     if len(parent_result) == 0:
         return None
 
@@ -179,10 +179,10 @@ def mpe_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     # if data contains a decision value use that otherwise use max
     max_child_branches = np.select([np.isnan(decision_value_given), True],
                                    [max_value, decision_value_given]).astype(int)
-    dec_branches = max_child_branches[max_child_branches < len(node.dec_values)]
-    dec_value = np.full((len(max_child_branches)), -1)
-
-    dec_value[dec_branches] = node.dec_values[dec_branches]
+    # dec_branches = max_child_branches[max_child_branches < len(node.dec_values)]
+    # dec_value = np.full((len(max_child_branches)), -1)
+    #
+    # dec_value[dec_branches] = node.dec_values[dec_branches]
 
     children_row_ids = {}
 
@@ -191,29 +191,31 @@ def mpe_max(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     # print("node and max_child_branches", (node.id, node.feature_name, max_child_branches))
     # decision values at each node
 
-    decision_values = {}
-    max_nodes = {}
-    decision_values[node.feature_name] = np.column_stack((parent_result, dec_value))
-    if len(dec_value) != 0:
-        node_name = [node.name]*len(dec_value)
-        max_nodes[node.feature_name] = np.column_stack((parent_result, node_name))
-    else:
-        max_nodes[node.feature_name] = np.column_stack((parent_result, []))
+    # decision_values = {}
+    # max_nodes = {}
+    # decision_values[node.feature_name] = np.column_stack((parent_result, dec_value))
+    # if len(dec_value) != 0:
+    #     node_name = [node.name]*len(dec_value)
+    #     max_nodes[node.feature_name] = np.column_stack((parent_result, node_name))
+    # else:
+    #     max_nodes[node.feature_name] = np.column_stack((parent_result, []))
 
     # print("w_children_log_probs", w_children_log_probs)
     return children_row_ids  # decision_values, max_nodes
 
 
-_node_top_down_mpe = {Product: mpe_prod, Sum: mpe_sum, Max: mpe_max,
+_node_top_down_mpe = {Product: mpe_prod, Sum: mpe_sum, Max: mpe_max_1,
                       InterfaceSwitch: mpe_interface_switch
                       }
-_node_bottom_up_mpe = {}
+_node_bottom_up_mpe = {Sum: sum_likelihood, Product: prod_likelihood,
+                           Max: max_likelihood}
 _node_bottom_up_mpe_log = {Sum: sum_log_likelihood, Product: prod_log_likelihood,
                            Max: max_log_likelihood}
 
 
 def get_node_funtions():
-    return [_node_top_down_mpe, _node_bottom_up_mpe]
+    #print(f'in get node functions _node_bottom_up_mpe {_node_bottom_up_mpe}')
+    return [_node_top_down_mpe, _node_bottom_up_mpe, _node_bottom_up_mpe_log]
 
 
 def log_node_bottom_up_mpe(node, *args, **kwargs):

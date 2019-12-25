@@ -1,4 +1,5 @@
-from spn.structure.leaves.histogram.MPE import histogram_mode
+from spn.structure.leaves.histogram.MPE import histogram_mode, \
+    histogram_top_down, histogram_bottom_up_ll
 from spn.algorithms.MPE import get_mpe_top_down_leaf
 
 from spn.algorithms.MPE import add_node_mpe
@@ -31,7 +32,7 @@ def utility_top_down(node, input_vals, lls_per_node, data=None):
 
 
 def add_utility_mpe_support():
-    add_node_mpe(Utility, utility_bottom_up_uVal, utility_top_down)
+    add_node_mpe(Utility, histogram_bottom_up_ll, histogram_top_down)
 
 
 def latent_interface_mode(node):

@@ -4,7 +4,7 @@
 import unittest
 import logging
 from spn.algorithms.RSPMN import RSPMN
-from spn.algorithms.RSPMNHelper import get_partial_order_two_time_steps, get_feature_names_two_time_steps,\
+from spn.algorithms.RSPMN.RSPMNInitialTemplateHelper import get_partial_order_two_time_steps, get_feature_names_two_time_steps,\
     get_nodes_two_time_steps
 
 logging.basicConfig(level=logging.DEBUG)
