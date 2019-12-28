@@ -46,7 +46,7 @@ class RSPMN:
     # Import methods of RSPMN class
     from ._RSMPNHardEM import eval_rspmn_bottom_up, eval_rspmn_top_down, learn_rspmn
     from ._RSPMNSoftEM import rspmn_gradient_backward, EM_optimization
-    from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu
+    from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu, topdowntraversal_and_bestdecisions
 
     # Other methods of class
     def get_params_for_get_each_time_step_data_for_template(self,
@@ -170,7 +170,7 @@ class RSPMN:
         # # eval vals of prev time step
         # eval_val_per_node[:, first_latent_node_column:] = \
         #     prev_eval_val_per_node[:, 1:num_of_template_children + 1]
-        print(f'meu at pass meu {eval_val_per_node}')
+        # print(f'meu at pass meu {eval_val_per_node}')
         return eval_val_per_node
 
     @staticmethod

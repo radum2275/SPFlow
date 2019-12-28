@@ -27,9 +27,6 @@ from spn.algorithms.Gradient import get_node_gradients
 from spn.algorithms.MEU import meu
 
 
-
-
-
 def learn_rspmn(self, data, total_num_of_time_steps_varies):
     self.template = copy.deepcopy(self.InitialTemplate.template_network)
 
@@ -47,10 +44,13 @@ def learn_rspmn(self, data, total_num_of_time_steps_varies):
             each_data_point = data[row]
             # print("length of sequence:", self.get_len_sequence())
 
-            unrolled_network_lls_per_node = \
-                self.eval_rspmn_bottom_up(
-                    each_data_point
-                )
+            # unrolled_network_lls_per_node = self.eval_rspmn_bottom_up(
+            #     self.template, each_data_point, True
+            # )
+            # self.eval_rspmn_top_down(
+            #     self.template, each_data_point, unrolled_network_lls_per_node,
+            #     _node_functions_top_down
+            # )
     else:
         assert type(data) is np.ndarray, 'data should be of type numpy' \
                                          ' array'
@@ -77,7 +77,7 @@ def eval_rspmn_bottom_up(self, template, data, *args):
     # assert self.InitialTemplate.top_network is not None,
     # f'top layer does not exist'
     # assert self.template is not None, f'template layer does not exist'
-
+    # print(type(data))
     assert type(data) is np.ndarray, 'data should be of type numpy array'
 
     num_variables_each_time_step, total_num_of_time_steps, \
@@ -150,7 +150,7 @@ def eval_rspmn_top_down(self, template, data,
         self.get_params_for_get_each_time_step_data_for_template(template,
                                                                  data)
 
-    for time_step_num in range(total_num_of_time_steps - 1):
+    for time_step_num in range(total_num_of_time_steps - 1): # Should not increment count on Latent interface leafs on last time step
         lls_per_node = unrolled_network_lls_per_node[
             total_num_of_time_steps - time_step_num
             ]

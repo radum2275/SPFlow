@@ -3,6 +3,7 @@ Created on March 28, 2019
 @author: Hari Teja Tatavarti
 
 """
+import logging
 
 from spn.algorithms.MPE import get_node_funtions
 from spn.algorithms.Inference import  likelihood, max_likelihood, log_likelihood, sum_likelihood, prod_likelihood
@@ -96,10 +97,10 @@ def meu(root, input_data,
         meu_per_node = np.zeros((data.shape[0], len(nodes)))
         meu_per_node.fill(np.nan)
 
-    print(f'data in meu {data[:, 0:18]}')
+    logging.debug(f'data in meu {data[:]}')
     # one pass bottom up evaluating the likelihoods
     likelihood(root, data, dtype=data.dtype, lls_matrix=likelihood_per_node)
-    print(f'likelihood_per_node in meu {likelihood_per_node[:, 0:18]}')
+    logging.debug(f'likelihood_per_node in meu {likelihood_per_node[:]}')
     eval_spmn_bottom_up_meu(
             root,
             _node_bottom_up_meu,
@@ -113,8 +114,8 @@ def meu(root, input_data,
 
     # print(f'meu matrix in meu befor assignment {meu_matrix}')
     # meu_matrix = meu_per_node
-    print(f'meu matrix in meu {meu_matrix}')
-    print(f'meu_per_node in meu {meu_per_node[:, 0:18]}')
+    logging.debug(f'meu matrix in meu {meu_matrix}')
+    logging.debug(f'meu_per_node in meu {meu_per_node[:]}')
 
     result = meu_per_node[:,root.id]
     return result

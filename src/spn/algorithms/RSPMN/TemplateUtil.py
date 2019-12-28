@@ -8,7 +8,8 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 from spn.structure.Base import Max
 
 
-def eval_template_top_down(root, eval_functions, *aargs, all_results=None, parent_result=None, **args):
+def eval_template_top_down(root, eval_functions, *aargs, all_results=None, parent_result=None,
+                           data=None, lls_per_node=None, meu_per_node=None, **args):
     """
     evaluates an spn top to down
 
@@ -33,27 +34,23 @@ def eval_template_top_down(root, eval_functions, *aargs, all_results=None, paren
     all_results[root] = [parent_result]
     latent_interface_dict = {}
 
-    all_max_nodes = []
-    all_decisions = []
     for layer in reversed(get_topological_order_layers(root)):
         for n in layer:
             func = n.__class__._eval_func[-1]
 
             param = all_results[n]
 
-            # if type(n) == Max:
-            #     result, decision_values, max_nodes = func(n, param, **args)
-            #     all_decisions.append(decision_values)
-            #     all_max_nodes.append(max_nodes)
-            # else:
-            result = func(n, param, **args)
+            if type(n) == Max and meu_per_node is not None:
+                result = func(n, param, data=data, meu_per_node=meu_per_node)
+            else:
+                result = func(n, param, data=data, lls_per_node=lls_per_node)
 
-            if aargs[0]:
+            if aargs[0]:  # soft em
                 if type(n) == LatentInterface:
                     top_down_pass_val=logsumexp(np.concatenate(param).reshape(-1, 1),
                               axis=1)
                     latent_interface_dict[n] = top_down_pass_val
-            else:
+            else:  # hard em
                 top_down_pass_val = np.concatenate(param)
                 if len(top_down_pass_val) > 0:
                     n.count = n.count + len(top_down_pass_val)

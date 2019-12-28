@@ -45,8 +45,8 @@ def latent_interface_likelihood(node, data=None, dtype=np.float64):
 
     # latent interface likelihood is the corresponding bottom time step interface node's likelihood
     # this is added to data from previous time step's log likelihood on the template network
-    print(~marg_ids)
-    print(node_data)
+    #print(~marg_ids)
+    #print(node_data)
     if not all(np.isnan(node_data)):
         probs[~marg_ids] = np.exp(node_data).reshape(-1, 1)
 
