@@ -88,7 +88,7 @@ class RSPMNInitialTemplate:
                 0, self.two_time_step_params.length_of_each_time_slice
             )
         )
-        logging.debug(f'scope_time_slice_1 {scope_time_slice_1}')
+        logging.debug(f'scope_time_slice_0 {scope_time_slice_0}')
 
         # perform bfs
         seen, queue = set([spmn_structure_two_time_steps]), collections.deque(
@@ -102,11 +102,12 @@ class RSPMNInitialTemplate:
 
                 if isinstance(node, Product):
                     # and node.scope == scope_top_interface_parent:
-                    logging.debug(f'scope_top_interface_parent {node.scope}')
+                    logging.debug(f'node.scope {node} {node.scope}')
 #                    logging.debug(f'child.scope {child.scope}')
 
-                    for child in node.children:
-                        # print(f'node.scope {node.scope}')
+                    node_children = node.children.copy()
+                    for child in node_children:
+                        logging.debug(f'child.scope {child} {child.scope}')
 
                         # check for top interface parent node
                         if not set(child.scope).intersection(
@@ -367,40 +368,55 @@ class RSPMNInitialTemplate:
         if total_num_of_time_steps_varies:
             assert type(data) is list, 'When sequence length varies, data is ' \
                                        'a list of numpy arrays'
-            print("Evaluating rspn and collecting nodes to update")
+            # print("Evaluating rspn and collecting nodes to update")
 
             for row in range(len(data)):
-                each_data_point = data[row]
+                each_data_point = data[row].reshape(1, -1)
                 # print("length of sequence:", self.get_len_sequence())
+                two_time_step_data_row = self.get_two_time_step_data(each_data_point)
+                if row == 0:
+                    two_time_step_data = two_time_step_data_row
+                else:
+                    two_time_step_data = np.vstack(
+                        (two_time_step_data, two_time_step_data_row)
+                    )
 
         else:
             assert type(data) is np.ndarray, 'data should be of type numpy' \
                                              ' array'
 
-            len_of_sequence = int(
-                data.shape[1] /
-                self.two_time_step_params.length_of_each_time_slice
+            two_time_step_data = self.get_two_time_step_data(data)
+
+        return two_time_step_data
+
+    def get_two_time_step_data(self, data):
+
+        len_of_sequence = int(
+            data.shape[1] /
+            self.two_time_step_params.length_of_each_time_slice
+        )
+
+        length_of_each_time_slice = self.two_time_step_params.length_of_each_time_slice
+        print(
+            f'self.two_time_step_params.length_of_each_time_slice {self.two_time_step_params.length_of_each_time_slice}')
+        print(f'data.shape[1] {data.shape[1]}')
+        print(f'len_of_seq {len_of_sequence}')
+
+        for time_step in range(len_of_sequence - 1):
+            if time_step == 0:
+                two_time_step_data = \
+                    data[:,
+                    (time_step * length_of_each_time_slice):
+                    (time_step + 2) * length_of_each_time_slice]
+                print(f'initial {two_time_step_data.shape}')
+            else:
+                two_time_step_data = np.vstack(
+                    (two_time_step_data,
+                     data[:, (time_step * length_of_each_time_slice):
+                             (time_step + 2) * length_of_each_time_slice])
                 )
+                print(f'timestep {time_step} {two_time_step_data.shape}')
 
-            length_of_each_time_slice = self.two_time_step_params.length_of_each_time_slice
-            print(f'self.two_time_step_params.length_of_each_time_slice {self.two_time_step_params.length_of_each_time_slice}')
-            print(f'data.shape[1] {data.shape[1]}')
-            print(f'len_of_seq {len_of_sequence}')
-
-            for time_step in range(len_of_sequence-1):
-                if time_step == 0:
-                    two_time_step_data = \
-                        data[:,
-                        (time_step*length_of_each_time_slice):
-                        (time_step+2)*length_of_each_time_slice]
-                    print(f'initial {two_time_step_data}')
-                else:
-                    two_time_step_data = np.vstack(
-                        (two_time_step_data,
-                         data[:, (time_step*length_of_each_time_slice):
-                                 (time_step+2)*length_of_each_time_slice])
-                    )
-                    print(f'timestep {time_step} {two_time_step_data}')
         return two_time_step_data
 
 

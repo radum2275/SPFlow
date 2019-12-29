@@ -302,7 +302,9 @@ class SPMN:
 
         self.spmn_structure = self.__learn_spmn_structure(data, remaining_vars_scope, curr_information_set_scope, index)
 
-        #Prune(self.spmn_structure)
+        Prune(self.spmn_structure)
+        assign_ids(self.spmn_structure)
+        rebuild_scopes_bottom_up(self.spmn_structure)
         return self.spmn_structure
 
 
