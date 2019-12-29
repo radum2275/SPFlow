@@ -8,8 +8,10 @@ from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 from spn.structure.Base import Max
 
 
-def eval_template_top_down(root, eval_functions, *aargs, all_results=None, parent_result=None,
-                           data=None, lls_per_node=None, meu_per_node=None, **args):
+def eval_template_top_down(root, eval_functions, soft_em=False,
+                           all_results=None, parent_result=None,
+                           data=None, lls_per_node=None, meu_per_node=None,
+                           **args):
     """
     evaluates an spn top to down
 
@@ -45,7 +47,7 @@ def eval_template_top_down(root, eval_functions, *aargs, all_results=None, paren
             else:
                 result = func(n, param, data=data, lls_per_node=lls_per_node)
 
-            if aargs[0]:  # soft em
+            if soft_em:  # soft em
                 if type(n) == LatentInterface:
                     top_down_pass_val=logsumexp(np.concatenate(param).reshape(-1, 1),
                               axis=1)

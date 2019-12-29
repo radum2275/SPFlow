@@ -1,38 +1,14 @@
 import collections
-import copy
 import logging
 
 from spn.algorithms.EM import get_node_updates_for_EM
-#from spn.algorithms.Gradient import gradient_backward
-from spn.structure.Base import Leaf, Sum, InterfaceSwitch, assign_ids
-
-from spn.algorithms.SPMN import SPMN, SPMNParams
-
-from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
-
-from spn.algorithms.Inference import log_likelihood
-from spn.structure.Base import get_nodes_by_type
-import numpy as np
-
-from spn.algorithms.MPE import get_node_funtions, mpe
-from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
-    gradient_backward
-
-from spn.algorithms.MEU import meu_max
-from spn.structure.Base import Max
-
-from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
-
 from spn.algorithms.Gradient import get_node_gradients
+from spn.algorithms.RSPMN.TemplateUtil import gradient_backward
+from spn.structure.Base import get_nodes_by_type
 
-from spn.algorithms.MEU import meu
 
+def soft_em(self, template, data, iterations=5, **kwargs):
 
-def EM_optimization(self, template, data, iterations=5,
-                    skip_validation=False, **kwargs):
-    # if not skip_validation:
-    #     valid, err = is_valid(spn)
-    #     assert valid, "invalid spn: " + err
 
     node_updates = get_node_updates_for_EM()
 
@@ -50,12 +26,13 @@ def EM_optimization(self, template, data, iterations=5,
 
         return template
 
+
 def rspmn_gradient_backward(self, template, data,
                             unrolled_network_lls_per_node, node_updates,
                             **kwargs):
 
     num_variables_each_time_step, total_num_of_time_steps, \
-    initial_num_latent_interface_nodes = \
+        initial_num_latent_interface_nodes = \
         self.get_params_for_get_each_time_step_data_for_template(template,
                                                                  data)
 

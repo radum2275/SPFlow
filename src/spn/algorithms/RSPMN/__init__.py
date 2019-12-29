@@ -1,31 +1,11 @@
-import collections
-import copy
-import logging
-
-from spn.algorithms.EM import get_node_updates_for_EM
-# from spn.algorithms.Gradient import gradient_backward
-from spn.structure.Base import Leaf, Sum, InterfaceSwitch, assign_ids
-
-from spn.algorithms.SPMN import SPMN, SPMNParams
-
-from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
-
-from spn.algorithms.Inference import log_likelihood
-from spn.structure.Base import get_nodes_by_type
 import numpy as np
 
-from spn.algorithms.MPE import get_node_funtions, mpe
+from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
 from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
     gradient_backward
-
-from spn.algorithms.MEU import meu_max
-from spn.structure.Base import Max
-
+from spn.structure.Base import Sum
+from spn.structure.Base import get_nodes_by_type
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
-
-from spn.algorithms.Gradient import get_node_gradients
-
-from spn.algorithms.MEU import meu
 
 
 class RSPMN:
@@ -44,9 +24,11 @@ class RSPMN:
         self.template = None
 
     # Import methods of RSPMN class
-    from ._RSMPNHardEM import eval_rspmn_bottom_up, eval_rspmn_top_down, learn_rspmn
-    from ._RSPMNSoftEM import rspmn_gradient_backward, EM_optimization
-    from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu, topdowntraversal_and_bestdecisions
+    from ._RSMPNHardEM import eval_rspmn_bottom_up, \
+        eval_rspmn_top_down, hard_em, parallelise
+    from ._RSPMNSoftEM import rspmn_gradient_backward, soft_em
+    from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu,\
+        topdowntraversal_and_bestdecisions
 
     # Other methods of class
     def get_params_for_get_each_time_step_data_for_template(self,
@@ -152,7 +134,7 @@ class RSPMN:
             latent_node_list
     ):
 
-        for i in range(0,len(latent_node_list),num_of_template_children):
+        for i in range(0, len(latent_node_list),num_of_template_children):
             for j in range(i, i+num_of_template_children):
                 k = j % num_of_template_children
                 eval_val_per_node[:, latent_node_list[j].id] = \
@@ -175,6 +157,9 @@ class RSPMN:
 
     @staticmethod
     def update_weights(template):
+        """
+        Updates weights on bottom sum interface node
+        """
 
         nodes = get_nodes_by_type(template)
 
