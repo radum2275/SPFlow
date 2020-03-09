@@ -18,7 +18,7 @@ def meu(self, template, data):
     """
 
     unrolled_network_meu_per_node = self.eval_rspmn_bottom_up_for_meu(template,
-                                                              data, False)[0]
+                                                              data)[0]
     # ll at root node
     meu = unrolled_network_meu_per_node[-1][:, 0]
 
