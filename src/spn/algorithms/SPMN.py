@@ -15,6 +15,8 @@ import numpy as np
 
 from spn.algorithms.TransformStructure import Prune
 
+import warnings
+warnings.filterwarnings("ignore")
 
 class SPMN:
 
@@ -132,12 +134,31 @@ class SPMN:
             if curr_op != 'Sum':    # fails if correlated variable set found in previous recursive call.
                                     # Without this condition code keeps looping at this stage
 
-                ds_context = get_ds_context(remaining_vars_data, remaining_vars_scope, self.params)
+                ds_context = get_ds_context(remaining_vars_data,
+                                            remaining_vars_scope, self.params)
+                curr_var_indices = list(
+                                        range(len(curr_information_set_scope)))
 
-                split_cols = get_split_cols_RDC_py()
-                data_slices_prod = split_cols(remaining_vars_data, ds_context, remaining_vars_scope)
+                exception = False
+                try:
+                    split_cols = get_split_cols_RDC_py()
+                    data_slices_prod = split_cols(remaining_vars_data, ds_context, remaining_vars_scope)
 
-                logging.debug(f'{len(data_slices_prod)} slices found at data_slices_prod: ')
+                    logging.debug(f'{len(data_slices_prod)} slices found at data_slices_prod: ')
+
+                except:
+                    print(
+                        "Exception in clustering step, "
+                        "defaulting to independent distribution")
+                    exception = True
+                    curr_vars_data = remaining_vars_data[:, curr_var_indices]
+                    curr_vars_scope = list(curr_information_set_scope)
+                    rest_data = np.delete(remaining_vars_data, curr_var_indices,
+                                          axis=1)
+                    rest_scope = np.delete(remaining_vars_scope,
+                                           curr_var_indices).tolist()
+                    data_slices_prod = [[curr_vars_data, curr_vars_scope, 1],
+                                        [rest_data, rest_scope, 1]]
 
                 prod_children = []
                 next_remaining_vars_scope = []

@@ -125,7 +125,8 @@ def get_split_rows_KMeans(n_clusters=2, pre_proc=None, ohe=False, seed=17):
         data = preproc(local_data, ds_context, pre_proc, ohe)
 
         from sklearn.cluster import KMeans
-        km_model = KMeans(n_clusters=n_clusters, random_state=seed)
+        km_model = KMeans(n_clusters=1 if local_data.shape[0] == 1
+                          else n_clusters, random_state=seed)
         clusters = km_model.fit_predict(data)
         return split_data_by_clusters(local_data, clusters, scope, rows=True), km_model
 
