@@ -34,7 +34,7 @@ def parallelise(self, data):
     print(f'unrolled_network_lls_per_node {unrolled_network_lls_per_node}')
 
 
-def hard_em(self, data, total_num_of_time_steps_varies=False):
+def hard_em(self, data, template, total_num_of_time_steps_varies=False):
     """
     Learns the final template structure by optimising the weights on
     bottom sum interface node by incrementing counts.
@@ -42,7 +42,7 @@ def hard_em(self, data, total_num_of_time_steps_varies=False):
     Note: Optimises weights only on bottom sum interface node.
     Can be modified to update weights on all sum nodes in update_weights method
     """
-    self.template = copy.deepcopy(self.InitialTemplate.template_network)
+    self.template = copy.deepcopy(template)
 
     node_functions = get_node_funtions()
     _node_functions_top_down = node_functions[0].copy()
@@ -78,7 +78,7 @@ def hard_em(self, data, total_num_of_time_steps_varies=False):
 
         # one pass bottom up to get likelihoods
         unrolled_network_lls_per_node = self.eval_rspmn_bottom_up(
-            self.template, data, True
+            self.template, data
         )
         # one pass top down to increment counts
         self.eval_rspmn_top_down(
@@ -87,7 +87,8 @@ def hard_em(self, data, total_num_of_time_steps_varies=False):
         )
 
     # update weights on bottom sum interface node
-    self.update_weights(self.template)
+    # self.update_weights(self.template)
+    return self.template
 
 
 def eval_rspmn_bottom_up(self, template, data):
@@ -128,6 +129,8 @@ def eval_rspmn_bottom_up(self, template, data):
     for time_step_num_in_reverse_order in range(total_num_of_time_steps - 1,
                                                 -1, -1):
 
+        print(f'time_step_num_in_reverse_order '
+            f'{time_step_num_in_reverse_order}')
         logging.debug(
             f'time_step_num_in_reverse_order '
             f'{time_step_num_in_reverse_order}')
