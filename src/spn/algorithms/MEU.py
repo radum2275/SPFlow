@@ -31,7 +31,9 @@ def meu_prod(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
     # if there is only one utility node then only one child of each product node
     # will have a utility value
     meu_children = meu_per_node[:,[child.id for child in node.children]]
+    print(f'meu_children in prod node {meu_children}')
     meu_per_node[:,node.id] = np.nansum(meu_children,axis=1)
+    print(f'meu at prod node {node.id} is {np.nansum(meu_children,axis=1)}')
 
 
 def meu_max(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
