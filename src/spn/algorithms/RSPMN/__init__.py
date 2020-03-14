@@ -6,7 +6,7 @@ from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
 from spn.structure.Base import Sum
 from spn.structure.Base import get_nodes_by_type
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
-
+import copy
 
 class RSPMN:
 
@@ -52,8 +52,8 @@ class RSPMN:
 
         each_time_step_data = data[:,
                               (time_step_num * num_variables_each_time_step):
-                              (
-                                      time_step_num * num_variables_each_time_step) + num_variables_each_time_step]
+                              (time_step_num * num_variables_each_time_step) +
+                              num_variables_each_time_step]
 
         assert each_time_step_data.shape[1] == num_variables_each_time_step
 
@@ -175,6 +175,44 @@ class RSPMN:
 
                     node.weights = (np.array(node.weights) / np.sum(
                         node.weights)).tolist()
+
+                    print(node.weights)
+
+            print(f'node {node}, count {node.count}')
+
+    @staticmethod
+    def prune_latent_interface_nodes(template):
+        """
+        Updates weights on bottom sum interface node
+        """
+
+        nodes = get_nodes_by_type(template)
+
+        for node in nodes:
+
+            if isinstance(node, Sum):
+
+                if all(isinstance(child, LatentInterface) for child in
+                       node.children):
+                    node_weights = []
+                    remove_children = []
+                    # node_children = copy.deepcopy(node.children)
+                    for i, child in enumerate(node.children):
+                        if node.children[i].count == 1:
+                            remove_children.append(child)
+                        else:
+                            node_weights.append(node.weights[i])
+
+                    remaining_nodes = [node for node in node.children
+                                       if node not in remove_children]
+
+                    node.children = remaining_nodes
+
+                    node.weights = node_weights
+
+                    if node.weights:
+                        node.weights = (np.array(node.weights) / np.sum(
+                            node.weights)).tolist()
 
                     print(node.weights)
 
