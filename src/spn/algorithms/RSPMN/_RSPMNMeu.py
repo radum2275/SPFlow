@@ -22,6 +22,7 @@ def meu(self, template, data):
     # ll at root node
     meu = unrolled_network_meu_per_node[-1][:, 0]
 
+    print(f'unrolled_network_meu_per_node {unrolled_network_meu_per_node}')
     return meu
 
 
@@ -114,7 +115,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
                                      )
 
             # eval_val_per_node = meu_matrix
-            # print(f'meu_per_node {meu_per_node}')
+            print(f'meu_per_node {meu_per_node}')
             # print(f'likelihood_per_node {likelihood_per_node}')
             # print(f'meu_matrix {meu_matrix}')
 
@@ -135,7 +136,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
                                      )
 
             # meu_per_node = meu_matrix
-            # print(f'meu_per_node {meu_per_node}')
+            print(f'meu_per_node {meu_per_node}')
             # print(f'likelihood_per_node {likelihood_per_node}')
 
         unrolled_network_likelihood_per_node.append(likelihood_per_node)
