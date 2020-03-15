@@ -96,6 +96,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
 
             top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
             meu_per_node = np.zeros((data.shape[0], len(top_nodes)))
+            meu_per_node.fill(np.nan)
             likelihood_per_node = np.zeros((data.shape[0], len(top_nodes)))
 
             top_latent_interface_list = []
@@ -124,6 +125,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
 
         else:
             meu_per_node = np.zeros((data.shape[0], len(template_nodes)))
+            meu_per_node.fill(np.nan)
             likelihood_per_node = np.zeros((data.shape[0], len(template_nodes)))
 
             # replace values of latent leaf nodes with

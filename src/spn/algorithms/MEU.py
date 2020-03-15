@@ -100,7 +100,7 @@ def meu(root, input_data,
 
     if meu_matrix is not None:
         meu_per_node = meu_matrix
-        meu_per_node[meu_per_node == 0] = np.nan
+        # meu_per_node[meu_per_node == 0] = np.nan
     else:
         meu_per_node = np.zeros((data.shape[0], len(nodes)))
         meu_per_node.fill(np.nan)
