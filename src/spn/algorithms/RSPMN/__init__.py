@@ -137,6 +137,7 @@ class RSPMN:
         for i in range(0, len(latent_node_list),num_of_template_children):
             for j in range(i, i+num_of_template_children):
                 k = j % num_of_template_children
+                print(f'k in pass meu {k}')
                 eval_val_per_node[:, latent_node_list[j].id] = \
                     prev_eval_val_per_node[:, k+1]
 

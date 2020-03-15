@@ -22,7 +22,7 @@ def meu(self, template, data):
     # ll at root node
     meu = unrolled_network_meu_per_node[-1][:, 0]
 
-    print(f'unrolled_network_meu_per_node {unrolled_network_meu_per_node}')
+    #print(f'unrolled_network_meu_per_node {unrolled_network_meu_per_node}')
     return meu
 
 
@@ -77,6 +77,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
 
         prev_meu_per_node = unrolled_network_meu_per_node[-1]
         logging.debug(f'prev_meu_per_node {prev_meu_per_node.shape}')
+        print(f'prev_meu_per_node {prev_meu_per_node.shape}')
 
         # attach likelihoods of bottom interface root nodes as
         # data for latent leaf vars
@@ -108,6 +109,8 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
                 meu_per_node, prev_meu_per_node,
                 initial_num_latent_interface_nodes, top_latent_interface_list)
 
+            print(f'initial meu_per_node {meu_per_node}')
+
             spmnMeu.meu(self.InitialTemplate.top_network,
                         each_time_step_data_for_template,
                         meu_matrix=meu_per_node,
@@ -115,7 +118,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
                                      )
 
             # eval_val_per_node = meu_matrix
-            print(f'meu_per_node {meu_per_node}')
+            #print(f'meu_per_node {meu_per_node}')
             # print(f'likelihood_per_node {likelihood_per_node}')
             # print(f'meu_matrix {meu_matrix}')
 
@@ -136,7 +139,7 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
                                      )
 
             # meu_per_node = meu_matrix
-            print(f'meu_per_node {meu_per_node}')
+            #print(f'meu_per_node {meu_per_node}')
             # print(f'likelihood_per_node {likelihood_per_node}')
 
         unrolled_network_likelihood_per_node.append(likelihood_per_node)
