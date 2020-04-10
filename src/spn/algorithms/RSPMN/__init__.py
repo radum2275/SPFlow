@@ -28,7 +28,8 @@ class RSPMN:
         eval_rspmn_top_down, hard_em, parallelise
     from ._RSPMNSoftEM import rspmn_gradient_backward, soft_em
     from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu,\
-        topdowntraversal_and_bestdecisions
+        topdowntraversal_and_bestdecisions, value_iteration, \
+        select_actions, meu_of_state
 
     # Other methods of class
     def get_params_for_get_each_time_step_data_for_template(self,
