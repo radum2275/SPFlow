@@ -49,6 +49,31 @@ def mpe_sum(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
     max_child_branches = np.argmax(w_children_log_probs, axis=1)
 
     children_row_ids = {}
+    #print(f"w_children_log_probs {w_children_log_probs}")
+    #print(f"max_child_branches {max_child_branches}")
+
+    for i, c in enumerate(node.children):
+        children_row_ids[c] = parent_result[max_child_branches == i]
+
+    return children_row_ids
+
+
+def mpe_sum_using_likelihoods(node, parent_result, data=None, lls_per_node=None, rand_gen=None):
+    if parent_result is None:
+        return None
+
+    parent_result = merge_input_vals(parent_result)
+
+    # logging.debug(f'sum node {node}')
+    w_children_log_probs = np.zeros((len(parent_result), len(node.weights)))
+    for i, c in enumerate(node.children):
+        w_children_log_probs[:, i] = np.log(lls_per_node[parent_result, c.id]) + np.log(node.weights[i])
+
+    max_child_branches = np.argmax(w_children_log_probs, axis=1)
+
+    children_row_ids = {}
+    #print(f"w_children_log_probs {w_children_log_probs}")
+    #print(f"max_child_branches {max_child_branches}")
 
     for i, c in enumerate(node.children):
         children_row_ids[c] = parent_result[max_child_branches == i]
