@@ -28,7 +28,7 @@ def max_best_dec_with_meu(node, parent_result, data=None, meu_per_node=None, ran
         decision_value_given[decision_value_given == node.dec_values[i]] = i
 
     max_value = np.argmax(w_children_meu, axis=1)
-    print(f'w_children_meu {w_children_meu}')
+    #print(f'w_children_meu {w_children_meu}')
     # if data contains a decision value use that otherwise use max
     max_child_branches = np.select([np.isnan(decision_value_given), True],
                                    [max_value, decision_value_given]).astype(int)
