@@ -94,8 +94,8 @@ def eval_rspmn_bottom_up_for_meu(self, template, data):
         # if time step is 0, evaluate top network
         if time_step_num_in_reverse_order == 0:
 
-            print(
-                f'each_time_step_data_for_template: {each_time_step_data_for_template}')
+            # print(
+            #     f'each_time_step_data_for_template: {each_time_step_data_for_template}')
 
             top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
             meu_per_node = np.zeros((data.shape[0], len(top_nodes)))
@@ -176,8 +176,8 @@ def select_actions(self, template, data,
                  unrolled_network_meu_per_node,
                  unrolled_network_likelihood_per_node)
 
-    print(f'lls_per_node {likelihood_per_node}')
-    print(f'meu_per_node {meu_per_node}')
+    #print(f'lls_per_node {likelihood_per_node}')
+    #print(f'meu_per_node {meu_per_node}')
     prev_likelihood_per_node = unrolled_network_likelihood_per_node[-2]
     each_time_step_data_for_template = \
         self.get_each_time_step_data_for_meu_pruned_template(
@@ -265,8 +265,8 @@ def meu_of_state(self, template, data,
     # if time step is 0, evaluate top network
 
 
-    print(
-        f'each_time_step_data_for_template: {each_time_step_data_for_template}')
+    # print(
+    #     f'each_time_step_data_for_template: {each_time_step_data_for_template}')
 
     top_nodes = get_nodes_by_type(self.InitialTemplate.top_network)
     meu_per_node = np.zeros((data.shape[0], len(top_nodes)))

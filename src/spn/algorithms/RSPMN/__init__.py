@@ -218,9 +218,9 @@ class RSPMN:
 
         for latent_node in latent_node_list:
             k = latent_node.interface_idx-num_variables_each_time_step
-            print(f'(k,id): {k, latent_node.id}')
-            print(f"eval_val_per_node.shape {eval_val_per_node.shape}")
-            print(f"prev_eval_val_per_node.shape {prev_eval_val_per_node.shape}")
+            # print(f'(k,id): {k, latent_node.id}')
+            # print(f"eval_val_per_node.shape {eval_val_per_node.shape}")
+            # print(f"prev_eval_val_per_node.shape {prev_eval_val_per_node.shape}")
             eval_val_per_node[:, latent_node.id] = \
                 prev_eval_val_per_node[:, k + 1]
 
@@ -247,9 +247,9 @@ class RSPMN:
                     node.weights = (np.array(node.weights) / np.sum(
                         node.weights)).tolist()
 
-                    print(node.weights)
+                    #print(node.weights)
 
-            print(f'node {node}, count {node.count}')
+            #print(f'node {node}, count {node.count}')
 
     @staticmethod
     def prune_latent_interface_nodes(template):
@@ -285,9 +285,9 @@ class RSPMN:
                         node.weights = (np.array(node.weights) / np.sum(
                             node.weights)).tolist()
 
-                    print(node.weights)
+                    #print(node.weights)
 
-            print(f'node {node}, count {node.count}')
+            #print(f'node {node}, count {node.count}')
         assign_ids(template)
         rebuild_scopes_bottom_up(template)
 
