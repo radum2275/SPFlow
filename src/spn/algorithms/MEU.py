@@ -24,11 +24,11 @@ def meu_sum(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
     norm = np.sum(weighted_likelihood, axis=1)
     normalized_weighted_likelihood = weighted_likelihood / norm.reshape(-1,1)
     meu_per_node[:,node.id] = np.sum(meu_children * normalized_weighted_likelihood, axis=1)
-    if all(isinstance(child, LatentInterface) for child in
-           node.children):
-        print(f'meu_children in sum node {meu_children}')
-        print(
-            f'meu at sum node {node.id} is {meu_per_node[:,node.id]}')
+    # if all(isinstance(child, LatentInterface) for child in
+    #        node.children):
+    #     print(f'meu_children in latent sum node {meu_children}')
+    #     print(
+    #         f'meu at latent sum node {node.id} is {meu_per_node[:,node.id]}')
 
 
 
@@ -37,9 +37,9 @@ def meu_prod(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):
     # if there is only one utility node then only one child of each product node
     # will have a utility value
     meu_children = meu_per_node[:,[child.id for child in node.children]]
-    print(f'meu_children in prod node {meu_children}')
+    #print(f'meu_children in prod node {meu_children}')
     meu_per_node[:,node.id] = np.nansum(meu_children,axis=1)
-    print(f'meu at prod node {node.id} is {np.nansum(meu_children,axis=1)}')
+    #print(f'meu at prod node {node.id} is {np.nansum(meu_children,axis=1)}')
 
 
 def meu_max(node, meu_per_node, data=None, lls_per_node=None, rand_gen=None):

@@ -3,7 +3,7 @@ import numpy as np
 from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
 from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
     gradient_backward
-from spn.structure.Base import Sum
+from spn.structure.Base import Sum, assign_ids, rebuild_scopes_bottom_up
 from spn.structure.Base import get_nodes_by_type
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 import copy
@@ -30,6 +30,8 @@ class RSPMN:
     from ._RSPMNMeu import meu, eval_rspmn_bottom_up_for_meu,\
         topdowntraversal_and_bestdecisions, value_iteration, \
         select_actions, meu_of_state
+    from ._PrunedTemplateMeu import value_iteration, \
+        eval_rspmn_bottom_up_for_meu, select_actions, meu_of_state
 
     # Other methods of class
     def get_params_for_get_each_time_step_data_for_template(self,
@@ -85,6 +87,50 @@ class RSPMN:
 
         return each_time_step_data_for_template
 
+
+
+    @staticmethod
+    def get_each_time_step_data_for_meu_pruned_template(
+         data, time_step_num, total_num_of_time_steps, eval_val_per_node,
+         initial_num_latent_interface_nodes,
+         num_variables_each_time_step,
+         bottom_up=True
+    ):
+
+        each_time_step_data = \
+            data[:, (time_step_num * num_variables_each_time_step):
+                    (time_step_num * num_variables_each_time_step) +
+                    num_variables_each_time_step
+            ]
+
+        assert each_time_step_data.shape[1] == num_variables_each_time_step
+
+        if time_step_num == total_num_of_time_steps - 1:
+            # last time step in the sequence. last level of template
+            # latent node data is corresponding bottom time step interface
+            # node's inference value. 1 for last level
+            latent_node_data = np.zeros((each_time_step_data.shape[0],
+                                         initial_num_latent_interface_nodes))
+
+        else:
+            if bottom_up:
+                # latent node data is corresponding bottom time step
+                # interface node's inference value
+                latent_node_data = eval_val_per_node[:,
+                                   1:initial_num_latent_interface_nodes + 1]
+                latent_node_data = np.log(latent_node_data)
+            else:
+                # latent node data is corresponding bottom time step
+                # interface node's inference value
+                latent_node_data = eval_val_per_node[:,
+                                   1:initial_num_latent_interface_nodes + 1]
+                latent_node_data = np.log(latent_node_data)
+
+        each_time_step_data_for_template = np.concatenate(
+            (each_time_step_data, latent_node_data), axis=1)
+
+        return each_time_step_data_for_template
+
     @staticmethod
     def get_each_time_step_data_for_meu(data, time_step_num,
                                              total_num_of_time_steps,
@@ -128,20 +174,26 @@ class RSPMN:
 
         return each_time_step_data_for_template
 
-    @staticmethod
-    def pass_meu_val_to_latent_interface_leaf_nodes(
+    def pass_meu_val_to_latent_interface_leaf_nodes(self,
             eval_val_per_node, prev_eval_val_per_node,
             num_of_template_children,
             latent_node_list
     ):
-
+        num_variables_each_time_step = len(self.params.feature_names)
         for i in range(0, len(latent_node_list),num_of_template_children):
             for j in range(i, i+num_of_template_children):
                 k = j % num_of_template_children
-                print(f'latent_node_list[j].id in pass meu {latent_node_list[j].id}')
+                #print(f"latent_node_list[j].interface_idx {latent_node_list[j].interface_idx}")
+                l = latent_node_list[j].interface_idx-num_variables_each_time_step
+                #print(f"k,l: {k, l}")
+                # print(f'latent_node_list[j].id in pass meu {latent_node_list[j].id}')
                 eval_val_per_node[:, latent_node_list[j].id] = \
                     prev_eval_val_per_node[:, k+1]
 
+        # for latent_node in latent_node_list:
+        #     k = latent_node.interface_idx-num_variables_each_time_step
+        #     eval_val_per_node[:, latent_node.id] = \
+        #         prev_eval_val_per_node[:, k + 1]
         # # leaf latent node columns in eval_val_per_node correspond to
         # # last few columns in current time step. They are equal to
         # # num of latent interface nodes
@@ -155,6 +207,23 @@ class RSPMN:
         # eval_val_per_node[:, first_latent_node_column:] = \
         #     prev_eval_val_per_node[:, 1:num_of_template_children + 1]
         # print(f'meu at pass meu {eval_val_per_node}')
+        return eval_val_per_node
+
+    def pass_meu_val_to_latent_interface_leaf_nodes_pruned_template(self,
+            eval_val_per_node, prev_eval_val_per_node,
+            num_of_template_children,
+            latent_node_list
+    ):
+        num_variables_each_time_step = len(self.params.feature_names)
+
+        for latent_node in latent_node_list:
+            k = latent_node.interface_idx-num_variables_each_time_step
+            print(f'(k,id): {k, latent_node.id}')
+            print(f"eval_val_per_node.shape {eval_val_per_node.shape}")
+            print(f"prev_eval_val_per_node.shape {prev_eval_val_per_node.shape}")
+            eval_val_per_node[:, latent_node.id] = \
+                prev_eval_val_per_node[:, k + 1]
+
         return eval_val_per_node
 
     @staticmethod
@@ -219,6 +288,8 @@ class RSPMN:
                     print(node.weights)
 
             print(f'node {node}, count {node.count}')
+        assign_ids(template)
+        rebuild_scopes_bottom_up(template)
 
     def log_likelihood(self, template, data):
 
