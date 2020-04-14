@@ -257,39 +257,82 @@ class RSPMN:
         Updates weights on bottom sum interface node
         """
 
-        nodes = get_nodes_by_type(template)
-
-        for node in nodes:
-
-            if isinstance(node, Sum):
-
-                if all(isinstance(child, LatentInterface) for child in
-                       node.children):
-                    node_weights = []
-                    remove_children = []
-                    # node_children = copy.deepcopy(node.children)
-                    for i, child in enumerate(node.children):
-                        if node.children[i].count == 1:
-                            remove_children.append(child)
-                        else:
-                            node_weights.append(node.weights[i])
-
-                    remaining_nodes = [node for node in node.children
-                                       if node not in remove_children]
-
-                    node.children = remaining_nodes
-
-                    node.weights = node_weights
-
-                    if node.weights:
-                        node.weights = (np.array(node.weights) / np.sum(
-                            node.weights)).tolist()
+        # nodes = get_nodes_by_type(template)
+        #
+        # for node in nodes:
+        #
+        #     if isinstance(node, Sum):
+        #
+        #         if all(isinstance(child, LatentInterface) for child in
+        #                node.children):
+        #             child_node_weights = []
+        #             remove_children = []
+        #             # node_children = copy.deepcopy(node.children)
+        #             for i, child in enumerate(node.children):
+        #                 if node.children[i].count == 1:
+        #                     remove_children.append(child)
+        #                 else:
+        #                     child_node_weights.append(node.weights[i])
+        #
+        #             remaining_nodes = [node for node in node.children
+        #                                if node not in remove_children]
+        #
+        #             node.children = remaining_nodes
+        #
+        #             node.weights = child_node_weights
+        #
+        #             if node.weights:
+        #                 node.weights = (np.array(node.weights) / np.sum(
+        #                     node.weights)).tolist()
 
                     #print(node.weights)
 
             #print(f'node {node}, count {node.count}')
         assign_ids(template)
         rebuild_scopes_bottom_up(template)
+
+        nodes = get_nodes_by_type(template)
+
+        for node in nodes:
+
+            remove_children = []
+            for child in node.children:
+
+                if isinstance(child, Sum):
+
+                    if all(isinstance(grand_child, LatentInterface) for grand_child in
+                           child.children):
+                        child_node_weights = []
+                        remove_grand_children = []
+                        # node_children = copy.deepcopy(node.children)
+                        for i, grand_child in enumerate(child.children):
+                            if child.children[i].count == 1:
+                                remove_grand_children.append(grand_child)
+                            else:
+                                child_node_weights.append(child.weights[i])
+
+                        remaining_nodes = [node for node in child.children
+                                           if node not in remove_grand_children]
+
+                        child.children = remaining_nodes
+
+                        child.weights = child_node_weights
+
+                        if child.weights:
+                            child.weights = (np.array(child.weights) / np.sum(
+                                child.weights)).tolist()
+
+                        if not child.children:
+                            remove_children.append(child)
+
+            remaining_child_nodes = [node for node in node.children
+                               if node not in remove_children]
+
+            node.children = remaining_child_nodes
+
+        
+
+
 
     def log_likelihood(self, template, data):
 
