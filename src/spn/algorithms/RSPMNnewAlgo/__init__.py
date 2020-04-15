@@ -1,6 +1,6 @@
 import numpy as np
 
-from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
+from spn.algorithms.RSPMNnewAlgo.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
 from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
     gradient_backward
 from spn.structure.Base import Sum, assign_ids, rebuild_scopes_bottom_up
@@ -8,7 +8,10 @@ from spn.structure.Base import get_nodes_by_type
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 import copy
 
-class RSPMN:
+from spn.structure.Base import Leaf
+
+
+class RSPMNnewAlgo:
 
     def __init__(self, partial_order, decision_nodes, utility_nodes,
                  feature_names, meta_types,
@@ -53,10 +56,17 @@ class RSPMN:
                                              num_variables_each_time_step,
                                              bottom_up=True):
 
-        each_time_step_data = data[:,
-                              (time_step_num * num_variables_each_time_step):
-                              (time_step_num * num_variables_each_time_step) +
-                              num_variables_each_time_step]
+        if time_step_num == -1:
+
+            each_time_step_data = \
+                np.empty((data.shape[0], num_variables_each_time_step))
+            each_time_step_data[:] = np.nan
+
+        else:
+            each_time_step_data = data[:,
+                                  (time_step_num * num_variables_each_time_step):
+                                  (time_step_num * num_variables_each_time_step) +
+                                  num_variables_each_time_step]
 
         assert each_time_step_data.shape[1] == num_variables_each_time_step
 
@@ -97,11 +107,18 @@ class RSPMN:
          bottom_up=True
     ):
 
-        each_time_step_data = \
-            data[:, (time_step_num * num_variables_each_time_step):
-                    (time_step_num * num_variables_each_time_step) +
-                    num_variables_each_time_step
-            ]
+        if time_step_num == -1:
+
+            each_time_step_data = \
+                np.empty((data.shape[0], num_variables_each_time_step))
+            each_time_step_data[:] = np.nan
+
+        else:
+            each_time_step_data = \
+                data[:, (time_step_num * num_variables_each_time_step):
+                        (time_step_num * num_variables_each_time_step) +
+                        num_variables_each_time_step
+                ]
 
         assert each_time_step_data.shape[1] == num_variables_each_time_step
 
@@ -257,7 +274,7 @@ class RSPMN:
         Updates weights on bottom sum interface node
         """
 
-        # nodes = get_nodes_by_type(template)
+        nodes = get_nodes_by_type(template)
         #
         # for node in nodes:
         #
@@ -288,47 +305,54 @@ class RSPMN:
                     #print(node.weights)
 
             #print(f'node {node}, count {node.count}')
-        assign_ids(template)
-        rebuild_scopes_bottom_up(template)
 
-        nodes = get_nodes_by_type(template)
 
         for node in nodes:
 
             remove_children = []
-            for child in node.children:
 
-                if isinstance(child, Sum):
+            if not isinstance(node, Leaf):
+                for child in node.children:
 
-                    if all(isinstance(grand_child, LatentInterface) for grand_child in
-                           child.children):
-                        child_node_weights = []
-                        remove_grand_children = []
-                        # node_children = copy.deepcopy(node.children)
-                        for i, grand_child in enumerate(child.children):
-                            if child.children[i].count == 1:
-                                remove_grand_children.append(grand_child)
-                            else:
-                                child_node_weights.append(child.weights[i])
+                    if isinstance(child, Sum):
 
-                        remaining_nodes = [node for node in child.children
-                                           if node not in remove_grand_children]
+                        if all(isinstance(grand_child, LatentInterface) for grand_child in
+                               child.children):
+                            child_node_weights = []
+                            remove_grand_children = []
+                            # node_children = copy.deepcopy(node.children)
+                            for i, grand_child in enumerate(child.children):
+                                if child.children[i].count == 1:
+                                    remove_grand_children.append(grand_child)
+                                else:
+                                    child_node_weights.append(child.weights[i])
 
-                        child.children = remaining_nodes
+                            remaining_nodes = [node for node in child.children
+                                               if node not in remove_grand_children]
 
-                        child.weights = child_node_weights
+                            child.children = remaining_nodes
 
-                        if child.weights:
-                            child.weights = (np.array(child.weights) / np.sum(
-                                child.weights)).tolist()
+                            child.weights = child_node_weights
 
-                        if not child.children:
-                            remove_children.append(child)
+                            if child.weights:
+                                child.weights = (np.array(child.weights) / np.sum(
+                                    child.weights)).tolist()
 
-            remaining_child_nodes = [node for node in node.children
-                               if node not in remove_children]
+                            if not child.children:
+                                remove_children.append(child)
 
-            node.children = remaining_child_nodes
+                remaining_child_nodes = [node for node in node.children
+                                   if node not in remove_children]
+
+                node.children = remaining_child_nodes
+
+        assign_ids(template)
+        rebuild_scopes_bottom_up(template)
+
+        #nodes = get_nodes_by_type(template)
+
+
+
 
 
     def log_likelihood(self, template, data):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from spn.algorithms.RSPMN.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
+from spn.algorithms.RSPMNnewAlgo.RSPMNInitialTemplateBuild import RSPMNInitialTemplate
 from spn.algorithms.RSPMN.TemplateUtil import eval_template_top_down, \
     gradient_backward
 from spn.structure.Base import Sum, assign_ids, rebuild_scopes_bottom_up
@@ -8,7 +8,7 @@ from spn.structure.Base import get_nodes_by_type
 from spn.structure.leaves.spmnLeaves.SPMNLeaf import LatentInterface
 import copy
 
-class RSPMN:
+class RSPMNnewAlgo:
 
     def __init__(self, partial_order, decision_nodes, utility_nodes,
                  feature_names, meta_types,
@@ -329,6 +329,9 @@ class RSPMN:
                                if node not in remove_children]
 
             node.children = remaining_child_nodes
+
+
+
 
 
     def log_likelihood(self, template, data):
