@@ -258,7 +258,7 @@ def eval_rspmn_top_down(self, template, data,
         )
         logging.debug(f'latent_interface_dict {latent_interface_dict}')
         print(f"timestep {time_step_num}")
-        print(f'latent_interface_dict {latent_interface_dict}')
+        #print(f'latent_interface_dict {latent_interface_dict}')
 
         # for each instance assign the interface node reached
         for latent_interface_node, instances in \
@@ -266,7 +266,7 @@ def eval_rspmn_top_down(self, template, data,
             template.interface_winner[instances] = \
                 latent_interface_node.interface_idx - \
                 num_variables_each_time_step
-        print(f"template winner {template.interface_winner}")
+        #print(f"template winner {template.interface_winner}")
         # if self.template.interface_winner.any(np.inf):
         #     raise Exception(f'All instances are not passed to
         #     the corresponding latent interface nodes')

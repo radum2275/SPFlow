@@ -255,8 +255,8 @@ class RSPMNnewAlgo:
 
             if isinstance(node, Sum):
 
-                if all(isinstance(child, LatentInterface) for child in
-                       node.children):
+                # if all(isinstance(child, LatentInterface) for child in
+                #        node.children):
 
                     for i, child in enumerate(node.children):
                         node.weights[i] = (node.children[i].count / node.count)
@@ -316,8 +316,8 @@ class RSPMNnewAlgo:
 
                     if isinstance(child, Sum):
 
-                        if all(isinstance(grand_child, LatentInterface) for grand_child in
-                               child.children):
+                        # if all(isinstance(grand_child, LatentInterface) for grand_child in
+                        #        child.children):
                             child_node_weights = []
                             remove_grand_children = []
                             # node_children = copy.deepcopy(node.children)
