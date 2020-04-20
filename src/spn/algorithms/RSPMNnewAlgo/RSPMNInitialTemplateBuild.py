@@ -176,36 +176,50 @@ class RSPMNInitialTemplate:
                             node.children = []
 
                 if interface_root_node_children:
-                    # and isinstance(node, Product) and
-                    # node.scope == scope_top_interface_parent:
-                    # parent interface node detected
 
-                    # interface root node is the time step 1 root node
-                    interface_node = \
-                        self.make_interface_root_node(interface_root_node_children)
-                    print(interface_node.scope)
-                    interface_root_node_list.append(interface_node)
+                    interface_children_list = \
+                        self.make_interface_children_list(
+                            interface_root_node_children)
+                    #print(interface_node.scope)
+                    #interface_root_node_list.append(interface_node)
 
-                    # create latent interface node for
-                    # corresponding interface node
+
                     num_features_in_one_time_step = int(len(
                         self.two_time_step_params.
                             feature_names_two_time_steps) / 2)
-                    interface_idx = interface_num + \
-                                    num_features_in_one_time_step
-                    interface_scope = 100
-                    latent_interface_child = LatentInterface(
-                        interface_idx=interface_idx,
-                        scope=interface_scope)
 
-                    logging.debug(
-                        f'latent interface child scope '
-                        f'{latent_interface_child.scope}')
+                    latent_child_list = []
+                    for interface_children in interface_children_list:
+                        interface_root = self.make_interface_root_node(
+                            interface_children)
+                        assign_ids(interface_root)
+                        rebuild_scopes_bottom_up(interface_root)
+                        interface_root_node_list.append(interface_root)
 
+                        # create latent interface node for
+                        # corresponding interface node
+                        interface_idx = interface_num + \
+                                        num_features_in_one_time_step
+                        interface_scope = 100
+                        latent_interface_child = LatentInterface(
+                            interface_idx=interface_idx,
+                            scope=interface_scope)
+                        latent_child_list.append(latent_interface_child)
+
+                        logging.debug(
+                            f'latent interface child scope '
+                            f'{latent_interface_child.scope}')
+                        interface_num += 1
+
+                    initial_interface_weights = [1 / len(
+                        latent_child_list)] * len(latent_child_list)
+                    latent_interface_sum = Sum(
+                        children=copy.deepcopy(latent_child_list),
+                        weights=initial_interface_weights
+                    )
                     # attach latent interface node to
                     # time step 0 interface parent
-                    node.children.append(latent_interface_child)
-                    interface_num += 1
+                    node.children.append(latent_interface_sum)
 
                 else:
                     for child in node.children:
@@ -214,16 +228,80 @@ class RSPMNInitialTemplate:
                             seen.add(child)
                             queue.append(child)
 
+                # if interface_root_node_children:
+                #     # and isinstance(node, Product) and
+                #     # node.scope == scope_top_interface_parent:
+                #     # parent interface node detected
+                #
+                #     # interface root node is the time step 1 root node
+                #     interface_node = \
+                #         self.make_interface_root_node(interface_root_node_children)
+                #     print(interface_node.scope)
+                #     interface_root_node_list.append(interface_node)
+                #
+                #     # create latent interface node for
+                #     # corresponding interface node
+                #     num_features_in_one_time_step = int(len(
+                #         self.two_time_step_params.
+                #             feature_names_two_time_steps) / 2)
+                #     interface_idx = interface_num + \
+                #                     num_features_in_one_time_step
+                #     interface_scope = 100
+                #     latent_interface_child = LatentInterface(
+                #         interface_idx=interface_idx,
+                #         scope=interface_scope)
+                #
+                #     logging.debug(
+                #         f'latent interface child scope '
+                #         f'{latent_interface_child.scope}')
+                #
+                #     # attach latent interface node to
+                #     # time step 0 interface parent
+                #     node.children.append(latent_interface_child)
+                #     interface_num += 1
+
+        print(interface_root_node_list)
         return interface_root_node_list
 
     @staticmethod
-    def make_interface_root_node(children_list):
+    def make_interface_children_list(children_list):
         """
         :param children_list: time step one children of time step zero
         parent node that is one level above last leaf
         variable in time step zero and time step one root.
         :return: interface node that corresponds to time step one root
         """
+        def recur(prod):
+
+            if any(isinstance(child, Sum) for child in prod.children):
+                # this prod node contains vars and sum nodes
+                var_children = []
+                for child in prod.children:
+                    if isinstance(child, Sum):
+                        interface_children_list = []
+                        for prod_child in child.children:
+                            interface_children = recur(prod_child)
+                            interface_children_list.extend(interface_children)
+                    else:
+                        var_children.append(child)
+                for interface_children in interface_children_list:
+                    interface_children.extend(var_children)
+
+                return interface_child_list
+
+            else:
+                return [[prod]]
+
+        prod_node = Product(children=children_list)
+        interface_child_list = recur(prod_node)
+        # prod_node.children = interface_child_list
+        print(interface_child_list)
+        # for prod in interface_child_list.children:
+        #     for child in prod.children:
+
+        return interface_child_list
+    @staticmethod
+    def make_interface_root_node(children_list):
 
         logging.debug(f'time_step_1_children {children_list}')
         if len(children_list) > 1:
@@ -250,7 +328,7 @@ class RSPMNInitialTemplate:
 
         # interface switch scope is equal to its child interface
         # node's scope, all of its children have same scope
-
+        print(interface_nodes)
         template_network = InterfaceSwitch(children=interface_nodes)
         template_network = self.\
             attach_interface_nodes_to_template_network_at_bottom(
