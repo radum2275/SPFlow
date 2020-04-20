@@ -1,7 +1,7 @@
-
 """
 Created on March 28, 2019
 @author: Hari Teja Tatavarti
+
 """
 from spn.structure.Base import Sum, Product, Max
 from spn.structure.Base import assign_ids, rebuild_scopes_bottom_up
@@ -17,7 +17,6 @@ from spn.algorithms.TransformStructure import Prune
 
 import warnings
 warnings.filterwarnings("ignore")
-
 
 class SPMN:
 
@@ -43,7 +42,7 @@ class SPMN:
         return self.op
 
     def __learn_spmn_structure(self, remaining_vars_data, remaining_vars_scope,
-                               curr_information_set_scope, index, chi2_threshold=0.05):
+                               curr_information_set_scope, index):
 
         logging.info(f'start of new recursion in __learn_spmn_structure method of SPMN')
         logging.debug(f'remaining_vars_scope: {remaining_vars_scope}')
@@ -113,15 +112,10 @@ class SPMN:
             logging.info(f'split clusters based on decision node values')
             for cluster_on_next_remaining_vars in clusters_on_next_remaining_vars:
 
-                decision_node_children_spns.append(
-                        self.__learn_spmn_structure(
-                            cluster_on_next_remaining_vars,
-                            next_remaining_vars_scope,
-                            next_information_set_scope,
-                            index,
-                            chi2_threshold
-                        )
-                    )
+                decision_node_children_spns.append(self.__learn_spmn_structure(cluster_on_next_remaining_vars,
+                                                                               next_remaining_vars_scope,
+                                                                               next_information_set_scope, index
+                                                                               ))
 
             decision_node_spn_branch = Max(dec_idx=scope_index, dec_values=dec_vals,
                                            children=decision_node_children_spns, feature_name=decision_node)
@@ -140,46 +134,39 @@ class SPMN:
             if curr_op != 'Sum':    # fails if correlated variable set found in previous recursive call.
                                     # Without this condition code keeps looping at this stage
 
-                ds_context = get_ds_context(remaining_vars_data, remaining_vars_scope, self.params)
-
-                curr_var_indices = list(range(len(curr_information_set_scope)))
+                ds_context = get_ds_context(remaining_vars_data,
+                                            remaining_vars_scope, self.params)
+                curr_var_indices = list(
+                                        range(len(curr_information_set_scope)))
 
                 exception = False
                 try:
                     split_cols = get_split_cols_RDC_py()
                     data_slices_prod = split_cols(remaining_vars_data, ds_context, remaining_vars_scope)
+
                     logging.debug(f'{len(data_slices_prod)} slices found at data_slices_prod: ')
 
-                    from sklearn.feature_selection import chi2
-                    min_chis = {}
-                    for var_idx in curr_var_indices:
-                        min_chi2_pvalue = np.min(chi2(
-                                np.abs(np.delete(remaining_vars_data,curr_var_indices,axis=1)),
-                                np.abs(remaining_vars_data[:,var_idx])
-                            )[1])
-                        min_chis[curr_information_set_scope[var_idx]] = min_chi2_pvalue
-
                 except:
-                    print("Exception in clustering step, defaulting to independent distribution")
+                    print(
+                        "Exception in clustering step, "
+                        "defaulting to independent distribution")
                     exception = True
-                    curr_vars_data = remaining_vars_data[:,curr_var_indices]
+                    curr_vars_data = remaining_vars_data[:, curr_var_indices]
                     curr_vars_scope = list(curr_information_set_scope)
-                    rest_data = np.delete(remaining_vars_data,curr_var_indices,axis=1)
-                    rest_scope = np.delete(remaining_vars_scope,curr_var_indices).tolist()
-                    data_slices_prod = [[curr_vars_data,curr_vars_scope,1],[rest_data, rest_scope, 1]]
-
+                    rest_data = np.delete(remaining_vars_data, curr_var_indices,
+                                          axis=1)
+                    rest_scope = np.delete(remaining_vars_scope,
+                                           curr_var_indices).tolist()
+                    data_slices_prod = [[curr_vars_data, curr_vars_scope, 1],
+                                        [rest_data, rest_scope, 1]]
 
                 prod_children = []
                 next_remaining_vars_scope = []
                 independent_vars_scope = []
 
                 for correlated_var_set_cluster, correlated_var_set_scope, weight in data_slices_prod:
-                    min_chi = 1
-                    if not exception:
-                        for var in correlated_var_set_scope:
-                            if var in min_chis and min_chis[var] < min_chi:
-                                min_chi = min_chis[var]
-                    if any(var_scope in correlated_var_set_scope for var_scope in rest_set_scope) or (not exception and min_chi < chi2_threshold):
+
+                    if any(var_scope in correlated_var_set_scope for var_scope in rest_set_scope):
 
                         next_remaining_vars_scope.extend(correlated_var_set_scope)
 
@@ -196,14 +183,14 @@ class SPMN:
 
                             independent_var_set_prod_child = learn_parametric(correlated_var_set_cluster,
                                                                               ds_context_prod,
-                                                                              min_instances_slice=1 if exception else 20,
+                                                                              min_instances_slice=20,
                                                                               initial_scope=correlated_var_set_scope)
 
                         else:
 
                             independent_var_set_prod_child = learn_mspn_for_spmn(correlated_var_set_cluster,
                                                                                  ds_context_prod,
-                                                                                 min_instances_slice=1 if exception else 20,
+                                                                                 min_instances_slice=20,
                                                                                  initial_scope=correlated_var_set_scope)
                         independent_vars_scope.extend(correlated_var_set_scope)
                         prod_children.append(independent_var_set_prod_child)
@@ -233,8 +220,6 @@ class SPMN:
                     next_information_set_scope = sorted(list(next_information_set_scope))
                     next_remaining_vars_scope = sorted(list(next_remaining_vars_scope))
 
-
-
                 self.set_next_operation('Sum')
 
                 next_remaining_vars_data = column_slice_data_by_scope(remaining_vars_data,
@@ -245,13 +230,10 @@ class SPMN:
                     f'independence test completed for current information set {curr_information_set_scope} '
                     f'and rest set {rest_set_scope} ')
 
-                remaining_vars_prod_child = self.__learn_spmn_structure(
-                        next_remaining_vars_data,
-                        next_remaining_vars_scope,
-                        next_information_set_scope,
-                        index,
-                        chi2_threshold
-                    )
+                remaining_vars_prod_child = self.__learn_spmn_structure(next_remaining_vars_data,
+                                                                        next_remaining_vars_scope,
+                                                                        next_information_set_scope,
+                                                                        index)
 
                 prod_children.append(remaining_vars_prod_child)
 
@@ -314,13 +296,8 @@ class SPMN:
                     # logging.debug(np.array_equal(cluster_on_remaining_vars, cluster ))
 
                     sum_node_children.append(
-                        self.__learn_spmn_structure(
-                                cluster_on_remaining_vars,
-                                remaining_vars_scope,
-                                curr_information_set_scope,
-                                index,
-                                chi2_threshold)
-                            )
+                        self.__learn_spmn_structure(cluster_on_remaining_vars, remaining_vars_scope,
+                                                    curr_information_set_scope, index))
 
                     weights.append(weight)
 
@@ -333,7 +310,7 @@ class SPMN:
                 logging.info(f'created sum node')
                 return sum_node
 
-    def learn_spmn(self, data, chi2_threshold=0.05):
+    def learn_spmn(self, data):
         """
         :param
         :return: learned spmn
@@ -344,26 +321,21 @@ class SPMN:
         remaining_vars_scope = np.array(range(len(self.params.feature_names))).tolist()
         self.set_next_operation('Any')
 
-        self.spmn_structure = self.__learn_spmn_structure(
-                data,
-                remaining_vars_scope,
-                curr_information_set_scope,
-                index,
-                chi2_threshold
-            )
+        self.spmn_structure = self.__learn_spmn_structure(data, remaining_vars_scope, curr_information_set_scope, index)
 
         Prune(self.spmn_structure)
+        assign_ids(self.spmn_structure)
+        rebuild_scopes_bottom_up(self.spmn_structure)
         return self.spmn_structure
 
 
 class SPMNParams:
 
-    def __init__(self, partial_order, decision_nodes, utility_node, feature_names, meta_types, util_to_bin):
+    def __init__(self, partial_order, decision_nodes, utility_nodes, feature_names, meta_types, util_to_bin):
+
         self.partial_order = partial_order
         self.decision_nodes = decision_nodes
-        self.utility_node = utility_node
+        self.utility_nodes = utility_nodes
         self.feature_names = feature_names
         self.meta_types = meta_types
         self.util_to_bin = util_to_bin
-
-
