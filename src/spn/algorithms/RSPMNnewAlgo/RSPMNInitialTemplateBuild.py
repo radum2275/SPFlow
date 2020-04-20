@@ -260,7 +260,7 @@ class RSPMNInitialTemplate:
                 #     node.children.append(latent_interface_child)
                 #     interface_num += 1
 
-        print(interface_root_node_list)
+        #print(interface_root_node_list)
         return interface_root_node_list
 
     @staticmethod
@@ -287,19 +287,19 @@ class RSPMNInitialTemplate:
                 for interface_children in interface_children_list:
                     interface_children.extend(var_children)
 
-                return interface_child_list
+                return interface_children_list
 
             else:
                 return [[prod]]
 
         prod_node = Product(children=children_list)
-        interface_child_list = recur(prod_node)
+        interface_children_list = recur(prod_node)
         # prod_node.children = interface_child_list
-        print(interface_child_list)
+        #print(interface_child_list)
         # for prod in interface_child_list.children:
         #     for child in prod.children:
 
-        return interface_child_list
+        return interface_children_list
     @staticmethod
     def make_interface_root_node(children_list):
 
