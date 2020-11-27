@@ -10,7 +10,6 @@ from spn.structure.leaves.parametric.Parametric import Gaussian, Bernoulli
 
 from spn.algorithms.EM import add_node_em_update
 
-
 def bernoulli_em_update(node, node_lls=None, node_gradients=None, root_lls=None, data=None, update_p=True, **kwargs):
     if not update_p:
         return

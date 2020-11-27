@@ -69,7 +69,7 @@ def meu(node, input_data,
     else:
         data = np.array(input_data)
     # assumes utility is only one and is at the last
-    # print("input data:", input_data[:, -1])
+    print("input data:", input_data[:, -1])
     assert np.isnan(data[:, -1]), "Please specify utility variable as NaN"
     nodes = get_nodes_by_type(node)
     likelihood_per_node = np.zeros((data.shape[0], len(nodes)))
