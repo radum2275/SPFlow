@@ -224,3 +224,9 @@ docs/api
 docs/_build
 docs/log.txt
 docs/cache
+
+# Pyre type checker
+.pyre/
+.DS_Store
+.vscode/
+*.pdf
